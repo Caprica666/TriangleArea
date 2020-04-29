@@ -3,6 +3,13 @@ using UnityEngine;
 
 public class LineSegment
 {
+    public enum ClipResult
+    {
+        COINCIDENT = 0,
+        INTERSECTING = 1,
+        NONINTERSECTING = -1
+    }
+
     public LineSegment(Vector3 start, Vector3 end)
     {
         mStart = start;
@@ -26,9 +33,9 @@ public class LineSegment
 
     /*
      * Find the intersection point between two line segments
-     * @returns 0 lines are coincident
-     *         -1 if lines are coincident or parallel
-     *         1 if line segments intersect
+     * @returns COINCIDENT lines are coincident
+     *         NONINTERSECTING if lines segments do not intersect
+     *         INTERSECTING if line segments intersect
      */
     public int FindIntersection(LineSegment line2, ref Vector3 intersection)
     {
@@ -51,12 +58,12 @@ public class LineSegment
         {
             if (x1hi < line2.End.x || line2.Start.x < x1lo)
             {
-                return -1;
+                return (int) ClipResult.NONINTERSECTING;
             }
         }
         else if (x1hi < line2.Start.x || line2.End.x < x1lo)
         {
-            return -1;
+            return (int) ClipResult.NONINTERSECTING;
         }
 
         // Y bound box test//
@@ -73,7 +80,7 @@ public class LineSegment
         {
             if (y1hi < line2.End.y || line2.Start.y < y1lo)
             {
-                return -1;
+                return (int) ClipResult.NONINTERSECTING;
             }
         }
         else if (y1hi < line2.Start.y || line2.End.y < y1lo)
@@ -91,12 +98,12 @@ public class LineSegment
             {
                 // compute intersection coordinates //
                 if (d < 0 || d > f)
-                    return 0;
+                    return (int) ClipResult.NONINTERSECTING;
             }
         }
         else if (d > 0 || d < f)
         {
-            return 0;
+            return (int) ClipResult.NONINTERSECTING;
         }
 
         e = A.x * C.y - A.y * C.x;  // beta numerator//
@@ -104,25 +111,29 @@ public class LineSegment
         // beta tests //
         if (f > 0)
         {
-            if (e < 0 || e > f) return 0;
+            if (e < 0 || e > f) return (int) ClipResult.NONINTERSECTING;
         }
-        else if (e > 0 || e < f) return 0;
+        else if (e > 0 || e < f) return (int) ClipResult.NONINTERSECTING;
 
         // check to see if they are coincident
         if ((Mathf.Abs(d) < 1e-7) &&
             (Mathf.Abs(e) < 1e-7))
         {
-            return 0;
+            return (int) ClipResult.COINCIDENT;
+        }
+        if (Mathf.Abs(e - f) < 1e-7)
+        {
+            return (int) ClipResult.COINCIDENT;
         }
 
         // check if they are parallel
         if (Mathf.Abs(f) < 1e-7)
         {
-            return -1;
+            return (int) ClipResult.NONINTERSECTING;
         }
 
         // segments intersect
-        return 1;
+        return (int) ClipResult.INTERSECTING;
     }
 
 }

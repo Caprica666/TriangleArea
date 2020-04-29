@@ -52,12 +52,15 @@ public class MakeTriangles : MonoBehaviour
             mClipList.Clear();
             mTriMesh.Clear();
             mClipMesh.Clear();
-            Triangle t1 = new Triangle(new Vector3(-0.1f, -0.6f, 0),
-                                       new Vector3(2.4f, -0.2f, 0),
-                                       new Vector3(1.4f, -1.8f, 0), 0);
-            Triangle t2 = new Triangle(new Vector3(2.6f, -1, 0),
-                                      new Vector3(1, 0.4f, 0),
-                                      new Vector3(1.9f, -1.5f, 0), 0);
+            Triangle t1 = new Triangle(new Vector3(-1.3f, 1, 0),
+                                       new Vector3(-0.2f, -1.6f, 0),
+                                       new Vector3(0.3f, -0.3f, 0), 0);
+            Triangle t2 = new Triangle(new Vector3(-3, -2.4f, 0),
+                                      new Vector3(-0.6f, 1.7f, 0),
+                                      new Vector3(-0.2f, -2.2f, 0), 3);
+            Triangle t3 = new Triangle(new Vector3(-1.4f, -1, 0),
+                          new Vector3(-1, 2.4f, 0),
+                          new Vector3(2.4f, -2, 0), 6);
             GameObject testlist = GameObject.Find("TestList");
             List<Triangle> tlist = new List<Triangle> { t1, t2 };
             mTestMesh = testlist.GetComponent<TriangleMesh>() as TriangleMesh;
@@ -66,8 +69,10 @@ public class MakeTriangles : MonoBehaviour
             mTestMesh.Clear();
             t1.TriColor = new Color(0, 1, 0.8f, 0.5f);
             t2.TriColor = new Color(1, 0, 0.8f, 0.5f);
+            t3.TriColor = new Color(1, 0.8f, 0, 0.5f);
             mTest.Add(t1, true);
             mTest.Add(t2, true);
+            mTest.Add(t3, true);
             StartCoroutine("TestClip");
         }
         else if (New)
@@ -104,7 +109,8 @@ public class MakeTriangles : MonoBehaviour
         yield return StartCoroutine(mHull.MakeHull(mTriVerts, c));
         if (mHull.Edges.Count >= 4)
         {
-            yield return StartCoroutine(mTriList.Clip(mHull.Edges, mClipList));
+            yield return StartCoroutine(mTriList.Clip(mHull.Edges, mClipList, mTest));
+            mTriVerts = mTriList.Edges;
             yield return new WaitForEndOfFrame();
         }
     }
@@ -127,8 +133,8 @@ public class MakeTriangles : MonoBehaviour
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        mClipList.Clear();
-        yield return StartCoroutine(mTest.ClipAll(mClipList));
+        mClipList.Clear(true);
+        yield return StartCoroutine(mTest.ClipAll());
     }
 
 }

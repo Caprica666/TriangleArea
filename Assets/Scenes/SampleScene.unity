@@ -438,8 +438,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 905e3d09ae14afc4b8ff90e77d594d2e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Test: 1
-  New: 0
+  Test: 0
+  New: 1
   Step: 0
 --- !u!33 &904569348
 MeshFilter:
@@ -542,7 +542,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 909153821}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.04, y: -2.5, z: 1}
+  m_LocalPosition: {x: 3, y: 0, z: 1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}

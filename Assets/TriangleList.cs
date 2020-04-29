@@ -8,6 +8,12 @@ public class TriangleList
     private List<Triangle.Edge> mEdges;
     private TriangleMesh mTriMesh;
 
+    public enum ClipResult
+    {
+        OUTSIDE = -1,
+        INSIDE = 0,
+        CLIPPED =  1
+    };
     public List<Triangle> Triangles
     {   get { return mTriangles.ToList(); } }
 
@@ -95,11 +101,11 @@ public class TriangleList
         }
     }
 
-    public void Clear()
+    public void Clear(bool clearmesh = false)
     {
         mTriangles.Clear();
         mEdges.Clear();
-        if (mTriMesh != null)
+        if (clearmesh && (mTriMesh != null))
         {
             mTriMesh.Clear();
         }
@@ -142,10 +148,11 @@ public class TriangleList
     }
 
     public System.Collections.IEnumerator Clip(List<Triangle.Edge> newhull,
-                                               TriangleList toclip)
+                                               TriangleList toclip,
+                                               TriangleList hulltris = null)
     {
         List<Triangle> clipped;
-        TriangleList mHullTris = new TriangleList();
+        TriangleList mHullTris = (hulltris != null) ? hulltris : new TriangleList();
 
         /*
          * Make a triangle list from the hull vertices
@@ -170,12 +177,17 @@ public class TriangleList
         /*
          * Clip triangles in new hull against one another
          */
-        mHullTris.ClipAgainst(clipagainst);
-        yield return new WaitForEndOfFrame();
+        System.Collections.IEnumerator iter = mHullTris.ClipAll();
+        while (iter.MoveNext())
+        {
+//            yield return new WaitForEndOfFrame();
+//            yield return new WaitForEndOfFrame();
+//            yield return new WaitForEndOfFrame();
+        }
         toclip.ClipAgainst(mHullTris.Triangles);
         toclip.Add(mHullTris.Triangles);
         toclip.Display();
-        yield return new WaitForEndOfFrame();
+//        yield return new WaitForEndOfFrame();
         GenerateEdges();
         yield return new WaitForEndOfFrame();
     }
@@ -201,16 +213,16 @@ public class TriangleList
                 {
                     continue;
                 }
-                int r = Clip(tri2, tri1);
+                ClipResult r = Clip(tri2, tri1);
 
                 switch (r)
                 {
-                    case 1:     // tri1 clips tri2
-                    ++numclipped;
+                    case ClipResult.CLIPPED:
+                    ++numclipped;     // tri1 clips tri2
                     break;
 
-                    case 0:    // tri2 inside tri1
-                    Remove(tri2);
+                    case ClipResult.INSIDE:
+                    Remove(tri2);    // tri2 inside tri1
                     break;
                 }
             }
@@ -229,9 +241,11 @@ public class TriangleList
         }
     }
 
-    public System.Collections.IEnumerator ClipAll(TriangleList result)
+    public System.Collections.IEnumerator ClipAll()
     {
         List<Triangle> trilist = null;
+        List<Triangle> isolated = new List<Triangle>();
+
         do
         {
             List<Triangle> cliplist = Triangles;
@@ -246,47 +260,60 @@ public class TriangleList
                 {
                     Triangle tri2 = cliplist[j];
 
+//                    Display(true);
+//                    yield return new WaitForEndOfFrame();
+//                    yield return new WaitForEndOfFrame();
+//                    yield return new WaitForEndOfFrame();
                     if (tri1 == tri2)   // dont clip against yourself
                     {
                         continue;
                     }
-                    int r = Clip(tri1, tri2);
-
-                    switch (r)
-                    {
-                        case 1:     // tri2 clips tri1
+                    if ((tri1.Contains(tri2.GetVertex(0)) >= 0) &&
+                        (tri1.Contains(tri2.GetVertex(1)) >= 0) &&
+                        (tri1.Contains(tri2.GetVertex(2)) >= 0))
+                    {                   // tri2 inside tri1
+                        cliplist.Remove(tri2);
+                        --j;
+                        Remove(tri2);
                         ++numclipped;
-                        break;
-
-                        case 0:    // tri1 inside tri2
-                        Remove(tri1);
-                        break;
-
-                        default:
                         continue;
                     }
-                    Display();
-                    yield return new WaitForEndOfFrame();
-                    yield return new WaitForEndOfFrame();
-                    yield return new WaitForEndOfFrame();
+                    else
+                    {
+                        ClipResult r = Clip(tri1, tri2);
+                        switch (r)
+                        {
+                            case ClipResult.CLIPPED:
+                            ++numclipped;       // tri2 clips tri1
+                            break;
+
+                            case ClipResult.INSIDE:
+                            Remove(tri1);       // tri1 inside tri2
+                            numclipped = 0;
+                            break;
+
+                            default:
+                            continue;
+                        }
+                    }
                 }
                 if (numclipped == 0)
                 {
-                    result.Add(tri1);
+                    isolated.Add(tri1);
                     Remove(tri1);
-                    Display(true);
-                    result.Display(true);
-                    yield return new WaitForEndOfFrame();
-                    yield return new WaitForEndOfFrame();
-                    yield return new WaitForEndOfFrame();
                 }
             }
         }
         while (Count > 1);
         trilist = Triangles;
-        result.Add(trilist[0], false);
-        result.Display(true);
-        Clear();
+        isolated.Add(trilist[0]);
+        Display(true);
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        Clear(true);
+        Add(isolated);
+        Display();
     }
 
     /*
@@ -305,6 +332,7 @@ public class TriangleList
             for (int i = 0; i < hull.Count - 1; ++i)
             {
                 Triangle.Edge e = hull[i];
+                Vector3 v = new Vector3();
 
                 if (e.Owner == t)
                 {
@@ -314,7 +342,7 @@ public class TriangleList
                 int i2 = t.Intersects(1, e, ref isect);
                 int i3 = t.Intersects(2, e, ref isect);
 
-                if (Clip(t, e, inside) > 0)
+                if (Clip(t, e, inside, ref v) > 0)
                 {
                     clipped.Add(t);
                     Remove(t);
@@ -329,138 +357,208 @@ public class TriangleList
 
     /* 
      * Clips the first triangle against the second.
-     * @returns -1 = triangle 1 outside triangle 2
-     *          0 = triangle 1 inside triangle 2
-     *          1 = triangle 1 was clipped by triangle 2
+     * @returns OUTSIDE = triangle 1 outside triangle 2
+     *          INSIDE = triangle 1 inside triangle 2
+     *          CLIPPED = triangle 1 was clipped by triangle 2
      *
      */
-    public int Clip(Triangle tri1, Triangle tri2)
+    public ClipResult Clip(Triangle tri1, Triangle tri2)
     {
         if (tri1 == tri2)
         {
-            return -1;
+            return ClipResult.OUTSIDE;
         }
         int[] inside = new int[3];
         int c1 = -1;
         int c2 = -1;
         int c3 = -1;
+        int intersections = 0;
+        Vector3[] isect = new Vector3[3];
 
         inside[0] = tri2.Contains(tri1.GetVertex(0));
         inside[1] = tri2.Contains(tri1.GetVertex(1));
         inside[2] = tri2.Contains(tri1.GetVertex(2));
+        if ((inside[0] >= 0) &&
+            (inside[1] >= 0) &&
+            (inside[2] >= 0))
+        {
+            return ClipResult.INSIDE;  // tri1 inside tri2
+        }
+        if ((inside[0] + inside[1] + inside[2]) == -2)
+        {
+            return ClipResult.OUTSIDE;
+        }
+        if (inside[0] == 0)
+        {
+            if (inside[1] == 0)
+            {
+                if (inside[2] >= 0)
+                {
+                    return ClipResult.INSIDE;
+                }
+            }
+            else if (inside[2] == 0)
+            {
+                if (inside[1] >= 0)
+                {
+                    return ClipResult.INSIDE;
+                }
+            }
+        }
+        else if ((inside[1] == 0) &&
+                 (inside[2] == 0))
+        {
+            if (inside[0] >= 0)
+            {
+                return ClipResult.INSIDE;
+            }
+        }
+        c1 = Clip(tri1, tri2.GetEdge(0), inside, ref isect[0]);
+        switch (c1)
+        {
+            case (int) ClipResult.INSIDE:
+            return ClipResult.INSIDE;
 
-        if ((inside[0] | inside[1] | inside[2]) == 1)
-        {
-            return 0;           // tri1 inside tri2
+            case 2:           // 2 intersections, was clipped
+            return ClipResult.CLIPPED;
+
+            case 1:            // only one intersections
+            ++intersections;
+            break;
         }
-        c1 = Clip(tri1, tri2.GetEdge(0), inside);
-        if (c1 >= 0)      // vertex on the edge
+        c2 = Clip(tri1, tri2.GetEdge(1), inside, ref isect[1]);
+        switch (c2)
         {
-            return 1;
+            case (int) ClipResult.INSIDE:
+            return ClipResult.INSIDE;
+
+            case 2:           // 2 intersections, was clipped
+            return ClipResult.CLIPPED;
+
+            case 1:             // 2 intersections, different edges
+            if (++intersections == 2)
+            {
+                if (AddTriangles(tri1, isect[0], 0, isect[1], 2, inside))
+                {
+                    tri1.Update(isect[0], tri1.GetVertex(1), isect[1]);
+//                    Update(tri1);
+                    return ClipResult.CLIPPED;
+                }
+            }
+            break;
         }
-        c2 = Clip(tri1, tri2.GetEdge(1), inside);
-        if (c2 >= 0)      // vertex on the edge
+        c3 = Clip(tri1, tri2.GetEdge(2), inside, ref isect[2]);
+        switch (c3)
         {
-            return 1;
+            case (int) ClipResult.INSIDE:
+            return ClipResult.INSIDE;
+
+            case 2:           // 2 intersections, was clipped
+            return ClipResult.CLIPPED;
+
+            case 1:             // 2 intersections, different edges
+            if (++intersections == 2)
+            {
+                if (c1 == 1)
+                {
+                    if (AddTriangles(tri1, isect[0], 1, isect[2], 2, inside))
+                    {
+                        tri1.Update(isect[0], tri1.GetVertex(0), isect[2]);
+//                        Update(tri1);
+                        return ClipResult.CLIPPED;
+                    }
+                }
+                else
+                {
+                    if (AddTriangles(tri1, isect[1], 1, isect[2], 0, inside))
+                    {
+                        tri1.Update(isect[1], tri1.GetVertex(2), isect[2]);
+//                        Update(tri1);
+                        return ClipResult.CLIPPED;
+                    }
+                }
+            }
+            break;
         }
-        c3 = Clip(tri1, tri2.GetEdge(2), inside);
-        return (c3 >= 0) ? 1 : -1;
+
+        return ClipResult.OUTSIDE;
     }
 
     /*
      * Clips a triangle against a line.
-     * @returns 1 = triangle was clipped
-     *          0 = triangle was clipped, no further clipping needed
-     *          -1 = triangle was not clipped by this edge
+     * @returns 2 = 2 intersections on this edge
+     *          1 = only one edge intersection
+     *          INSIDE = triangle edge coincident with line
+     *          OUTSDIDE = triangle was not clipped by this edge
+     *          1 = only one edge intersection
      */
-    public int Clip(Triangle tri1, Triangle.Edge edge2, int[] inside)
+    public int Clip(Triangle tri1, Triangle.Edge edge2, int[] inside, ref Vector3 isect)
     {
         Vector3 isect0 = new Vector3();
         Vector3 isect1 = new Vector3();
         Vector3 isect2 = new Vector3();
-        int i0;
-        int i1;
-        int i2;
+        int i0 = tri1.Intersects(0, edge2, ref isect0);
+        int i1 = tri1.Intersects(1, edge2, ref isect1);
+        int i2 = tri1.Intersects(2, edge2, ref isect2);
+        int intersections = 0;
 
-        i0 = tri1.Intersects(0, edge2, ref isect0);
-        if (inside[0] == 0)
+        if ((i0 + i1 + i2) <= -2)
         {
-            i0 = 0;
-        }
-        i1 = tri1.Intersects(1, edge2, ref isect1);
-        if (inside[1] == 0)
-        {
-            i1 = 0;
-        }
-        i2 = tri1.Intersects(2, edge2, ref isect2);
-        if (inside[2] == 0)
-        {
-            i2 = 0;
-        }
-        if ((i0 + i1 + i2) < 1)
-        {
-            return -1;
+            return (int) ClipResult.OUTSIDE;
         }
         if (i0 > 0)                     // first edge intersects input edge
         {
+            isect = isect0;
+            ++intersections;
             if (i1 > 0)                 // second edge intersects input edge
             {
-                if (((isect0 - isect1).sqrMagnitude) < 1e-7)
-                {
-                    return -1;
-                }
                 if (AddTriangles(tri1, isect0, 0, isect1, 2, inside))
                 {
                     tri1.Update(isect0, tri1.GetVertex(1), isect1);
-                    Update(tri1);
-                    return 1;
+//                    Update(tri1);
+                    return 2;
                 }
-                return -1;
+                return (int) ClipResult.OUTSIDE;
             }
             else if (i2 > 0)             // third edge intersects input edge
             {
-                if (((isect0 - isect2).sqrMagnitude) < 1e-7)
-                {
-                    return -1;
-                }
+                isect = isect2;
+                ++intersections;
                 if (AddTriangles(tri1, isect0, 1, isect2, 2, inside))
                 {
                     tri1.Update(isect0, tri1.GetVertex(0), isect2);
-                    Update(tri1);
-                    return 1;
+    //                Update(tri1);
+                    return 2;
                 }
-                return -1;
+                return (int) ClipResult.OUTSIDE;
             }
         }
         else if (i1 > 0)        // second edge intersects input edge
         {
+            isect = isect1;
+            ++intersections;
             if (i2 > 0)
             {
-                if (((isect1 - isect2).sqrMagnitude) < 1e-7)
-                {
-                    return -1;
-                }
                 if (AddTriangles(tri1, isect1, 1, isect2, 0, inside))
                 {
                     tri1.Update(isect1, tri1.GetVertex(2), isect2);
-                    Update(tri1);
-                    return 1;
+     //               Update(tri1);
+                    return 2;
                 }
-                return -1;
+                return (int) ClipResult.OUTSIDE;
             }
         }
-        return -1;              // no intersections
+        if (intersections == 1)   // one intersection only
+        {
+            int temp = i0 & i1 & i2;
+            return (temp == 0) ? (int) ClipResult.INSIDE : 1;
+        }
+        return (int) ClipResult.OUTSIDE; // no intersections
     }
 
     bool AddTriangles(Triangle tri, Vector3 isect1, int vindex1, Vector3 isect2, int vindex2, int[] inside)
     {
         bool result = false;
-
-        if ((inside[vindex1] >= 0) &&
-            (inside[vindex2] >= 0))
-        {
-            return false;
-        }
         Vector3 va = tri.GetVertex(vindex1);
         Vector3 vb = tri.GetVertex(vindex2);
         int count = (mTriMesh != null) ? mTriMesh.VertexCount : 0;
