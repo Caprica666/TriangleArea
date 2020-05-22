@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 public class Triangle
 {
@@ -69,6 +70,12 @@ public class Triangle
         verts[0] = v1;
         verts[1] = v2;
         verts[2] = v3;
+        if (((v1 - v2).sqrMagnitude < 1e-7) ||
+            ((v1 - v3).sqrMagnitude < 1e-7) ||
+            ((v3 - v2).sqrMagnitude < 1e-7))
+        {
+            throw new ArgumentException("degenerate triangle");
+        }
         if (v2.x < v1.x)
         {
             if (v3.x < v2.x)
@@ -90,7 +97,17 @@ public class Triangle
         Edges[0] = new Edge(this, 0, new LineSegment(verts[0], verts[1]));
         Edges[1] = new Edge(this, 1, new LineSegment(verts[1], verts[2]));
         Edges[2] = new Edge(this, 2, new LineSegment(verts[2], verts[0]));
-        TriColor = new Color(Random.value, Random.value, Random.value, 0.5f);
+        TriColor = new Color(UnityEngine.Random.value,
+                            UnityEngine.Random.value,
+                            UnityEngine.Random.value, 0.5f);
+    }
+
+    public Triangle(Triangle source) :
+        this(source.GetVertex(0),
+             source.GetVertex(1),
+             source.GetVertex(2),
+             source.VertexIndex)
+    {
     }
 
     public float GetArea()
@@ -136,6 +153,12 @@ public class Triangle
 
     public void Update(Vector3 v1, Vector3 v2, Vector3 v3)
     {
+        if (((v1 - v2).sqrMagnitude < 1e-7) ||
+            ((v1 - v3).sqrMagnitude < 1e-7) ||
+            ((v3 - v2).sqrMagnitude < 1e-7))
+        {
+            throw new ArgumentException("degenerate triangle");
+        }
         Edges[0].EdgeLine.Start = v1;
         Edges[0].EdgeLine.End = v2;
         Edges[1].EdgeLine.Start = v2;
@@ -181,5 +204,23 @@ public class Triangle
             return 0;
         }
         return ((alpha > 0) && (beta > 0) && (gamma > 0)) ? 1 : -1;
+    }
+
+    public bool Contains(Triangle t)
+    {
+        int i1 = Contains(t.GetVertex(0));
+        int i2 = Contains(t.GetVertex(1));
+        int i3 = Contains(t.GetVertex(2));
+        if ((i1 + i2 + i3) == 0)
+        {
+            return false;
+        }
+        if ((i1 >= 0) &&
+            (i2 >= 0) &&
+            (i3 >= 0))
+        {
+            return true;
+        }
+        return false;
     }
 }

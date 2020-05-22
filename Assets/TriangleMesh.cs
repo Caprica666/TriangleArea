@@ -68,18 +68,12 @@ public class TriangleMesh : MonoBehaviour
     public void UpdateTriangle(Triangle tri)
     {
         int i = tri.VertexIndex;
-        try
-        {
-            mVertices[i].Set(tri.Edges[0].Vertex.x, tri.Edges[0].Vertex.y, 0);
-            mVertices[i + 1].Set(tri.Edges[1].Vertex.x, tri.Edges[1].Vertex.y, 0);
-            mVertices[i + 2].Set(tri.Edges[2].Vertex.x, tri.Edges[2].Vertex.y, 0);
-            mColors[i] = tri.TriColor;
-            mColors[i + 1] = tri.TriColor;
-            mColors[i + 2] = tri.TriColor;
-        }
-        catch (ArgumentOutOfRangeException e)
-        {
-        }
+        mVertices[i].Set(tri.Edges[0].Vertex.x, tri.Edges[0].Vertex.y, 0);
+        mVertices[i + 1].Set(tri.Edges[1].Vertex.x, tri.Edges[1].Vertex.y, 0);
+        mVertices[i + 2].Set(tri.Edges[2].Vertex.x, tri.Edges[2].Vertex.y, 0);
+        mColors[i] = tri.TriColor;
+        mColors[i + 1] = tri.TriColor;
+        mColors[i + 2] = tri.TriColor;
     }
 
     public void NewTriangles(Rect bounds)

@@ -15,6 +15,7 @@ public class MakeTriangles : MonoBehaviour
     private TriangleList mClipList;
     private TriangleList mTriList;
     private Hull mHull;
+    private List<Triangle> mSaved = null;
     private Rect mBounds = new Rect(0, 0, 6, 6);
     private TriangleList mTest = new TriangleList();
 
@@ -22,7 +23,7 @@ public class MakeTriangles : MonoBehaviour
     void Start()
     {
         Init();
-//        StartCoroutine("Area");
+        //        StartCoroutine("Area");
     }
 
     private void Init()
@@ -34,8 +35,17 @@ public class MakeTriangles : MonoBehaviour
         mTriList.TriMesh = mTriMesh;
         mClipList = new TriangleList();
         mClipList.TriMesh = mClipMesh;
+        GameObject testlist = GameObject.Find("TestList");
+        mTestMesh = testlist.GetComponent<TriangleMesh>() as TriangleMesh;
+        mTest.TriMesh = mTestMesh;
         Component[] lines = gameObject.GetComponentsInChildren(typeof(LineRenderer));
-
+        Triangle t1 = new Triangle(new Vector3(-2.9f, -0.1f, 0),
+                                   new Vector3(-2.3f, -2.1f, 0),
+                                   new Vector3(1.1f, -0.5f, 0), 0);
+        Triangle t2 = new Triangle(new Vector3(-1.5f, -2.1f, 0),
+                                   new Vector3(2.5f, -0.2f, 0),
+                                   new Vector3(2.8f, 2.4f, 0), 3);
+        mSaved = new List<Triangle> { t1, t2 };
         foreach (Component line in lines)
         {
             DestroyImmediate(line.gameObject);
@@ -52,27 +62,6 @@ public class MakeTriangles : MonoBehaviour
             mClipList.Clear();
             mTriMesh.Clear();
             mClipMesh.Clear();
-            Triangle t1 = new Triangle(new Vector3(-1.3f, 1, 0),
-                                       new Vector3(-0.2f, -1.6f, 0),
-                                       new Vector3(0.3f, -0.3f, 0), 0);
-            Triangle t2 = new Triangle(new Vector3(-3, -2.4f, 0),
-                                      new Vector3(-0.6f, 1.7f, 0),
-                                      new Vector3(-0.2f, -2.2f, 0), 3);
-            Triangle t3 = new Triangle(new Vector3(-1.4f, -1, 0),
-                          new Vector3(-1, 2.4f, 0),
-                          new Vector3(2.4f, -2, 0), 6);
-            GameObject testlist = GameObject.Find("TestList");
-            List<Triangle> tlist = new List<Triangle> { t1, t2 };
-            mTestMesh = testlist.GetComponent<TriangleMesh>() as TriangleMesh;
-            mTest.TriMesh = mTestMesh;
-            mTest.Clear();
-            mTestMesh.Clear();
-            t1.TriColor = new Color(0, 1, 0.8f, 0.5f);
-            t2.TriColor = new Color(1, 0, 0.8f, 0.5f);
-            t3.TriColor = new Color(1, 0.8f, 0, 0.5f);
-            mTest.Add(t1, true);
-            mTest.Add(t2, true);
-            mTest.Add(t3, true);
             StartCoroutine("TestClip");
         }
         else if (New)
@@ -122,6 +111,7 @@ public class MakeTriangles : MonoBehaviour
         mTriMesh.Clear();
         mTriMesh.NewTriangles(mBounds);
         mTriVerts = mTriMesh.PrepareTriangles(mTriList, true);
+        mSaved = mTriList.Triangles;
         yield return new WaitForEndOfFrame();
         yield return StartCoroutine(NewHull());
     }
@@ -129,7 +119,9 @@ public class MakeTriangles : MonoBehaviour
     IEnumerator TestClip()
     {
         yield return new WaitForEndOfFrame();
-        mTest.Display();
+        mTest.Clear();
+        mTest.CopyTriangles(mSaved);
+        mTest.Display(true);
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
