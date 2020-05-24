@@ -62,37 +62,66 @@ public class Triangle
     public int VertexIndex;
     public Edge[] Edges = new Edge[3];
     public Color TriColor;
-
+    private static readonly float EPSILON = 1e-5f;
     public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
+    {
+        Init(v1, v2, v3, vindex);
+    }
+
+    public Triangle(Triangle source)
+    {
+        Vector3 v1 = source.GetVertex(0);
+        Vector3 v2 = source.GetVertex(1);
+        Vector3 v3 = source.GetVertex(2);
+        Init(new Vector3(v1.x, v1.y, v1.z),
+             new Vector3(v2.x, v2.y, v2.z),
+             new Vector3(v3.x, v3.y, v3.z),
+             source.VertexIndex);
+    }
+
+    private void Init(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
     {
         VertexIndex = vindex;
         Vector3[] verts = new Vector3[3];
         verts[0] = v1;
         verts[1] = v2;
         verts[2] = v3;
-        if (((v1 - v2).sqrMagnitude < 1e-7) ||
-            ((v1 - v3).sqrMagnitude < 1e-7) ||
-            ((v3 - v2).sqrMagnitude < 1e-7))
+        if (((v1 - v2).sqrMagnitude < EPSILON) ||
+            ((v1 - v3).sqrMagnitude < EPSILON) ||
+            ((v3 - v2).sqrMagnitude < EPSILON))
         {
             throw new ArgumentException("degenerate triangle");
         }
-        if (v2.x < v1.x)
+        if (v2.x >= v1.x)
         {
-            if (v3.x < v2.x)
+            if (v3.x >= v2.x)
             {
                 verts[0] = v3;
                 verts[2] = v1;
             }
-            else
+            else if (v1.x >= v3.x)
             {
                 verts[0] = v2;
                 verts[1] = v1;
             }
+            else
+            {
+                verts[0] = v2;
+                verts[1] = v3;
+                verts[2] = v1;
+            }
         }
-        else if (v3.x < v1.x)
+        else if (v3.x > v2.x)
         {
             verts[0] = v3;
-            verts[2] = v1;
+            verts[1] = v1;
+            verts[2] = v2;
+        }
+        else if (v3.x > v1.x)
+        {
+            verts[0] = v3;
+            verts[1] = v1;
+            verts[2] = v2;
         }
         Edges[0] = new Edge(this, 0, new LineSegment(verts[0], verts[1]));
         Edges[1] = new Edge(this, 1, new LineSegment(verts[1], verts[2]));
@@ -102,12 +131,15 @@ public class Triangle
                             UnityEngine.Random.value, 0.5f);
     }
 
-    public Triangle(Triangle source) :
-        this(source.GetVertex(0),
-             source.GetVertex(1),
-             source.GetVertex(2),
-             source.VertexIndex)
+    public bool IsDegenerate()
     {
+        if (((Edges[0].Vertex - Edges[1].Vertex).sqrMagnitude < EPSILON) ||
+            ((Edges[1].Vertex - Edges[2].Vertex).sqrMagnitude < EPSILON) ||
+            ((Edges[0].Vertex - Edges[2].Vertex).sqrMagnitude < EPSILON))
+        {
+            return true;
+        }
+        return false;
     }
 
     public float GetArea()
@@ -159,12 +191,7 @@ public class Triangle
         {
             throw new ArgumentException("degenerate triangle");
         }
-        Edges[0].EdgeLine.Start = v1;
-        Edges[0].EdgeLine.End = v2;
-        Edges[1].EdgeLine.Start = v2;
-        Edges[1].EdgeLine.End = v3;
-        Edges[2].EdgeLine.Start = v3;
-        Edges[2].EdgeLine.End = v1;
+        Init(v1, v2, v3, VertexIndex);
     }
 
     public int Intersects(int edgeindex1, Edge edge2, ref Vector3 isect)

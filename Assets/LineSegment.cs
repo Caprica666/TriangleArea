@@ -85,7 +85,7 @@ public class LineSegment
         }
         else if (y1hi < line2.Start.y || line2.End.y < y1lo)
         {
-            return -1;
+            return (int) ClipResult.NONINTERSECTING;
         }
         d = B.y * C.x - B.x * C.y;  // alpha numerator//
         f = A.y * B.x - A.x * B.y;  // both denominator//
