@@ -143,6 +143,9 @@ public class TriangleArea : MonoBehaviour
         yield return new WaitForEndOfFrame();
         mClipList.Clear(true);
         yield return StartCoroutine(mTest.ClipAll());
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
     }
 
 }

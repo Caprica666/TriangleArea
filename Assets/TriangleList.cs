@@ -14,7 +14,8 @@ public class TriangleList
     {
         OUTSIDE = -1,
         INSIDE = 0,
-        CLIPPED =  1
+        CLIPPED =  1,
+        INTERSECTED = 2
     };
     public List<Triangle> Triangles
     {   get { return mTriangles.ToList(); } }
@@ -264,21 +265,24 @@ public class TriangleList
         do
         {
             List<Triangle> cliplist = Triangles;
+            int getout = 0;
             trilist = Triangles;
 
             for (int i = 0; i < trilist.Count - 1; ++i)
             {
                 Triangle tri1 = trilist[i];
-                int numclipped = 0;
+                bool wasclipped = false;
+                int j = i + 1;
 
                 if (tri1.IsDegenerate())
                 {
                     Remove(tri1);
                     continue;
                 }
-                for (int j = i + 1; j < cliplist.Count; ++j)
+
+                while ((getout == 0) && (j < cliplist.Count))
                 {
-                    Triangle tri2 = cliplist[j];
+                    Triangle tri2 = cliplist[j++];
 
                     Display(true);
                     yield return new WaitForEndOfFrame();
@@ -291,7 +295,7 @@ public class TriangleList
                     if (tri1.Contains(tri2)) // tri2 inside tri1
                     {
                         Remove(tri2);
-                        ++numclipped;
+                        ++getout;
                     }
                     else
                     {
@@ -299,20 +303,42 @@ public class TriangleList
                         switch (r)
                         {
                             case ClipResult.CLIPPED:
-                            ++numclipped;       // tri2 clips tri1
+                            wasclipped = true;          // tri2 clips tri1
                             break;
 
                             case ClipResult.INSIDE:
-                            Remove(tri1);       // tri1 inside tri2
-                            numclipped = 0;
+                            Remove(tri1);               // tri1 inside tri2
+                            break;
+
+                            case ClipResult.INTERSECTED:
+                            switch (Clip(tri2, tri1))
+                            {
+                                case ClipResult.CLIPPED: // tri1 clips tri2
+                                ++getout;
+                                break;
+
+                                case ClipResult.INSIDE: // tri2 inside tri1
+                                Remove(tri2);
+                                isolated.Add(tri2);
+                                ++getout;
+                                break;
+
+                                default:
+                                continue;
+                            }
                             break;
 
                             default:
                             continue;
                         }
+                        ++getout;
                     }
                 }
-                if (numclipped == 0)
+                if (--getout > 0)
+                {
+                    break;
+                }
+                if (!wasclipped)
                 {
                     isolated.Add(tri1);
                     Remove(tri1);
@@ -324,10 +350,10 @@ public class TriangleList
         if (Count > 0)
         {
             isolated.Add(trilist[0]);
-//            Display(true);
-//            yield return new WaitForEndOfFrame();
-//            yield return new WaitForEndOfFrame();
-//            yield return new WaitForEndOfFrame();
+            Display(true);
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
         }
         Clear(true);
         Add(isolated);
@@ -344,6 +370,7 @@ public class TriangleList
         int numremoved = 0;
         List<Triangle> toclip = mTriangles.ToList();
         int[] inside = new int[3];
+        int edgehit = -1;
 
         foreach (Triangle t in toclip)
         {
@@ -360,7 +387,7 @@ public class TriangleList
                 int i2 = t.Intersects(1, e, ref isect);
                 int i3 = t.Intersects(2, e, ref isect);
 
-                if (Clip(t, e, inside, ref v) > 0)
+                if (Clip(t, e, inside, ref v, ref edgehit) > 0)
                 {
                     clipped.Add(t);
                     Remove(t);
@@ -378,7 +405,7 @@ public class TriangleList
      * @returns OUTSIDE = triangle 1 outside triangle 2
      *          INSIDE = triangle 1 inside triangle 2
      *          CLIPPED = triangle 1 was clipped by triangle 2
-     *
+     *          INTERSECTED = triangle 2 may be clipped by triangle 1
      */
     public ClipResult Clip(Triangle tri1, Triangle tri2)
     {
@@ -387,6 +414,7 @@ public class TriangleList
             return ClipResult.OUTSIDE;
         }
         int[] inside = new int[3];
+        int[] edgeshit = new int[] { -1, -1, -1 };
         int c1 = -1;
         int c2 = -1;
         int c3 = -1;
@@ -435,7 +463,8 @@ public class TriangleList
                 return ClipResult.INSIDE;
             }
         }
-        c1 = Clip(tri1, tri2.GetEdge(0), inside, ref isect[0]);
+
+        c1 = Clip(tri1, tri2.GetEdge(0), inside, ref isect[0], ref edgeshit[0]);
         switch (c1)
         {
             case (int) ClipResult.INSIDE:
@@ -444,11 +473,11 @@ public class TriangleList
             case 2:           // 2 intersections, was clipped
             return ClipResult.CLIPPED;
 
-            case 1:            // only one intersections
+            case 1:            // only one intersection
             ++intersections;
             break;
         }
-        c2 = Clip(tri1, tri2.GetEdge(1), inside, ref isect[1]);
+        c2 = Clip(tri1, tri2.GetEdge(1), inside, ref isect[1], ref edgeshit[1]);
         switch (c2)
         {
             case (int) ClipResult.INSIDE:
@@ -458,17 +487,10 @@ public class TriangleList
             return ClipResult.CLIPPED;
 
             case 1:             // 2 intersections, different edges
-            if (++intersections == 2)
-            {
-                if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect[0], isect[1]))
-                {
-                    tri1.Update(isect[0], tri1.GetVertex(1), isect[1]);
-                    return ClipResult.CLIPPED;
-                }
-            }
+            ++intersections;
             break;
         }
-        c3 = Clip(tri1, tri2.GetEdge(2), inside, ref isect[2]);
+        c3 = Clip(tri1, tri2.GetEdge(2), inside, ref isect[2], ref edgeshit[2]);
         switch (c3)
         {
             case (int) ClipResult.INSIDE:
@@ -482,24 +504,50 @@ public class TriangleList
             {
                 if (c1 == 1)
                 {
+                    if (edgeshit[0] == edgeshit[2])
+                    {
+                        return ClipResult.INTERSECTED;
+                    }
                     if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect[0], isect[2]))
                     {
                         tri1.Update(tri1.GetVertex(0), isect[0], isect[2]);
                         return ClipResult.CLIPPED;
                     }
+                    return ClipResult.OUTSIDE;
                 }
                 else if (c2 == 1)
                 {
+                    if (edgeshit[1] == edgeshit[2])
+                    {
+                        return ClipResult.INTERSECTED;
+                    }
                     if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect[1], isect[2]))
                     {
                         tri1.Update(isect[1], isect[2], tri1.GetVertex(2));
                         return ClipResult.CLIPPED;
                     }
+                    return ClipResult.OUTSIDE;
                 }
             }
             break;
         }
-
+        if (intersections == 2)
+        {
+            if (edgeshit[1] == edgeshit[0])
+            {
+                return ClipResult.INTERSECTED;
+            }
+            if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect[0], isect[1]))
+            {
+                tri1.Update(isect[0], tri1.GetVertex(1), isect[1]);
+                return ClipResult.CLIPPED;
+            }
+            return ClipResult.OUTSIDE;
+        }
+        if (intersections == 1)
+        {
+            return ClipResult.INTERSECTED;
+        }
         return ClipResult.OUTSIDE;
     }
 
@@ -511,7 +559,7 @@ public class TriangleList
      *          OUTSDIDE = triangle was not clipped by this edge
      *          1 = only one edge intersection
      */
-    public int Clip(Triangle tri1, Triangle.Edge edge2, int[] inside, ref Vector3 isect)
+    public int Clip(Triangle tri1, Triangle.Edge edge2, int[] inside, ref Vector3 isect, ref int edgeindex)
     {
         Vector3 isect0 = new Vector3();
         Vector3 isect1 = new Vector3();
@@ -531,6 +579,7 @@ public class TriangleList
             ++intersections;
             if (i1 > 0)                 // second edge intersects input edge
             {
+                edgeindex = 0;
                 if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect0, isect1))
                 {
                     tri1.Update(isect0, tri1.GetVertex(1), isect1);
@@ -541,6 +590,7 @@ public class TriangleList
             else if (i2 > 0)             // third edge intersects input edge
             {
                 isect = isect2;
+                edgeindex = 2;
                 ++intersections;
                 if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect0, isect2))
                 {
@@ -556,7 +606,8 @@ public class TriangleList
             ++intersections;
             if (i2 > 0)
             {
-                if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(0), tri1.GetVertex(1), isect1, isect2))
+                edgeindex = 1;
+                if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2))
                 {
                     tri1.Update(isect1, isect2, tri1.GetVertex(2));
                     return 2;
