@@ -7,10 +7,15 @@ public class TriangleArea : MonoBehaviour
     public bool Test;
     public bool New;
     public bool Step;
+    public bool PlaneSweep;
+    public int TriangleCount = 2;
 
+    private float mMaxDist = 5;
+    private float mMinDist = 0.2f;
     private TriangleMesh mTriMesh;
     private TriangleMesh mClipMesh;
     private TriangleMesh mTestMesh;
+    private EdgeGroup mEdgeGroup;
     private List<Triangle.Edge> mTriVerts;
     private TriangleList mClipList;
     private TriangleList mTriList;
@@ -38,16 +43,20 @@ public class TriangleArea : MonoBehaviour
         mTestMesh = testlist.GetComponent<TriangleMesh>() as TriangleMesh;
         mTest.TriMesh = mTestMesh;
         Component[] lines = gameObject.GetComponentsInChildren(typeof(LineRenderer));
-        Triangle t1 = new Triangle(new Vector3(-0.3552006f, -0.2544912f, 0),
-                                  new Vector3(1.297413f, -1.326539f, 0),
-                                  new Vector3(0.476674f, 1.428999f, 0), 0);
-        Triangle t2 = new Triangle(new Vector3(-2.363433f, -2.736485f, 0),
-                                  new Vector3(2.197673f, -2.093367f, 0),
-                                  new Vector3(-0.38421f, -1.150313f, 0), 3);
+        Triangle t1 = new Triangle(new Vector3(2, 0, 0),
+                                  new Vector3(0, 2, 0),
+                                  new Vector3(-2, 0, 0), 0);
+        Triangle t2 = new Triangle(new Vector3(0, -1, 0),
+                                  new Vector3(1.5f, 3, 0),
+                                  new Vector3(3, -1, 0), 3);
+/*
         Triangle t3 = new Triangle(new Vector3(-0.6508294f, -2.309343f, 0),
                                    new Vector3(1.754553f, 0.9481241f, 0),
                                    new Vector3(0.4796473f, 0.6368812f, 0), 6);
-        mSaved = new List<Triangle> { t1, t2, t3 };
+                                   */
+        mSaved = new List<Triangle> { t1, t2 };
+        mClipMesh.VertexCount = TriangleCount * 3;
+        mClipMesh.GenerateMesh(mSaved);
         foreach (Component line in lines)
         {
             DestroyImmediate(line.gameObject);
@@ -60,11 +69,14 @@ public class TriangleArea : MonoBehaviour
         if (Test)
         {
             Test = false;
-            mTriList.Clear();
-            mClipList.Clear();
+            if (mTriList != null)
+            {
+                mTriList.Clear();
+                mClipList.Clear();
+            }
             mTriMesh.Clear();
             mClipMesh.Clear();
-            StartCoroutine("TestClip");
+            StartCoroutine("PlaneSweepTest");
         }
         else if (New)
         {
@@ -84,6 +96,11 @@ public class TriangleArea : MonoBehaviour
             {
                 StartCoroutine(NewHull());
             }
+        }
+        else if (PlaneSweep)
+        {
+            PlaneSweep = false;
+            StartCoroutine(PlaneSweepArea());
         }
     }
 
@@ -111,9 +128,10 @@ public class TriangleArea : MonoBehaviour
         mClipList.Clear();
         mClipMesh.Clear();
         mTriMesh.Clear();
-        mTriMesh.NewTriangles(mBounds);
+        mSaved = NewTriangles(mBounds, TriangleCount * 3);
+        mTriMesh.GenerateMesh(mSaved);
         mTriVerts = mTriMesh.PrepareTriangles(mTriList, true);
-        mSaved = mTriList.SaveTriangles();
+#if DEBUG
         foreach (Triangle t in mSaved)
         {
             Vector3[] verts = t.Vertices;
@@ -124,13 +142,112 @@ public class TriangleArea : MonoBehaviour
             }
             Debug.LogWarning(s);
         }
+#endif
         while ((mTriVerts.Count >= 4) && (mTriList.Count > 1))
         {
             yield return new WaitForEndOfFrame();
             yield return StartCoroutine(NewHull());
         }
     }
+    public List<Triangle> NewTriangles(Rect bounds, int numverts)
+    {
+        List<Triangle> trilist = new List<Triangle>();
+        Color color = new Color(1, 1, 1, 0.5f);
+        float size = bounds.width;
 
+        mBounds = bounds;
+        for (int i = 0; i < numverts; i += 3)
+        {
+            /*
+             * generate 3 triangles with random vertices
+             */
+            float x = Random.value - 0.5f;
+            float y = Random.value - 0.5f;
+            Vector3 v1;
+            Vector3 v2;
+            Vector3 v3;
+
+            color.r = Random.value;
+            color.g = Random.value;
+            color.b = Random.value;
+            color.a = 0.5f;
+            v1 = new Vector3(size * x + bounds.x,
+                             size * y + bounds.y,
+                             0);
+            do
+            {
+                x = Random.value - 0.5f;
+                y = Random.value - 0.5f;
+                v2 = new Vector3(size * x + bounds.x,
+                                 size * y + bounds.y,
+                                 0);
+                x = Random.value - 0.5f;
+                y = Random.value - 0.5f;
+                v3 = new Vector3(size * x + bounds.x,
+                                 size * y + bounds.y,
+                                 0);
+            }
+            while (!CheckTriSize(v1, v2, v3));
+            Triangle t = new Triangle(v1, v2, v3);
+            trilist.Add(t);
+        }
+        return trilist;
+    }
+
+    public bool CheckTriSize(Vector3 v1, Vector3 v2, Vector3 v3)
+    {
+        Vector3 v = v1 - v2;
+        float m = v.magnitude;
+        if ((m > mMaxDist) || (m < mMinDist))
+        {
+            return false;
+        }
+        v = v1 - v3;
+        m = v.magnitude;
+        if ((m > mMaxDist) || (m < mMinDist))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    IEnumerator PlaneSweepTest()
+    {
+        mTriMesh.Clear();
+        mTriMesh.VertexCount = TriangleCount * 3;
+        mClipMesh.VertexCount = TriangleCount * 3;
+        mClipMesh.GenerateMesh(mSaved);
+        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh);
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        for (int i = 1; i < mSaved.Count; ++i)
+        {
+            Triangle t = mSaved[i];
+            yield return mEdgeGroup.Add(t);
+        }
+        mTriMesh.Display();
+    }
+
+    IEnumerator PlaneSweepArea()
+    {
+        mSaved = NewTriangles(mBounds, TriangleCount * 3);
+        mTriMesh.VertexCount = TriangleCount * 3;
+        mClipMesh.VertexCount = TriangleCount * 3;
+        mTriMesh.Clear();
+        mClipMesh.Clear();
+        mClipMesh.GenerateMesh(mSaved);
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh);
+        for (int i = 1; i < mSaved.Count; ++i)
+        {
+            Triangle t = mSaved[i];
+            yield return mEdgeGroup.Add(t);
+        }
+        mTriMesh.Display();
+    }
     IEnumerator TestClip()
     {
         yield return new WaitForEndOfFrame();

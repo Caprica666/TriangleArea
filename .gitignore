@@ -338,3 +338,11 @@ ASALocalRun/
 
 # BeatPulse healthcheck temp database
 healthchecksdb
+/Library
+/MonoBleedingEdge
+/ProjectSettings
+/Temp
+/TriangleArea_Data
+/UnityPlayer.dll
+/UnityCrashHandler32.exe
+/TriangleArea.exe

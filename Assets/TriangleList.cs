@@ -68,7 +68,7 @@ public class TriangleList
 
     public Vector3 GetVertex(int vertIndex)
     {
-        return mEdges[vertIndex].Vertex;
+        return mEdges[vertIndex].EdgeLine.Start;
     }
 
     public void Add(Triangle t, bool addtomesh = false)
@@ -144,7 +144,7 @@ public class TriangleList
         }
         if (mTriMesh != null)
         {
-            mTriMesh.GenerateMesh(this);
+            mTriMesh.GenerateMesh(Triangles);
         }
         SortByX();
     }
@@ -155,7 +155,7 @@ public class TriangleList
         {
             if (makemesh)
             {
-                mTriMesh.GenerateMesh(this);
+                mTriMesh.GenerateMesh(Triangles);
             }
             else
             {
@@ -383,11 +383,11 @@ public class TriangleList
                 {
                     continue;
                 }
-                int i1 = t.Intersects(0, e, ref isect);
-                int i2 = t.Intersects(1, e, ref isect);
-                int i3 = t.Intersects(2, e, ref isect);
+                int i1 = t.Intersects(0, e.EdgeLine, ref isect);
+                int i2 = t.Intersects(1, e.EdgeLine, ref isect);
+                int i3 = t.Intersects(2, e.EdgeLine, ref isect);
 
-                if (Clip(t, e, inside, ref v, ref edgehit) > 0)
+                if (Clip(t, e.EdgeLine, inside, ref v, ref edgehit) > 0)
                 {
                     clipped.Add(t);
                     Remove(t);
@@ -464,7 +464,7 @@ public class TriangleList
             }
         }
 
-        c1 = Clip(tri1, tri2.GetEdge(0), inside, ref isect[0], ref edgeshit[0]);
+        c1 = Clip(tri1, tri2.GetEdge(0).EdgeLine, inside, ref isect[0], ref edgeshit[0]);
         switch (c1)
         {
             case (int) ClipResult.INSIDE:
@@ -477,7 +477,7 @@ public class TriangleList
             ++intersections;
             break;
         }
-        c2 = Clip(tri1, tri2.GetEdge(1), inside, ref isect[1], ref edgeshit[1]);
+        c2 = Clip(tri1, tri2.GetEdge(1).EdgeLine, inside, ref isect[1], ref edgeshit[1]);
         switch (c2)
         {
             case (int) ClipResult.INSIDE:
@@ -490,7 +490,7 @@ public class TriangleList
             ++intersections;
             break;
         }
-        c3 = Clip(tri1, tri2.GetEdge(2), inside, ref isect[2], ref edgeshit[2]);
+        c3 = Clip(tri1, tri2.GetEdge(2).EdgeLine, inside, ref isect[2], ref edgeshit[2]);
         switch (c3)
         {
             case (int) ClipResult.INSIDE:
@@ -559,7 +559,7 @@ public class TriangleList
      *          OUTSDIDE = triangle was not clipped by this edge
      *          1 = only one edge intersection
      */
-    public int Clip(Triangle tri1, Triangle.Edge edge2, int[] inside, ref Vector3 isect, ref int edgeindex)
+    public int Clip(Triangle tri1, LineSegment edge2, int[] inside, ref Vector3 isect, ref int edgeindex)
     {
         Vector3 isect0 = new Vector3();
         Vector3 isect1 = new Vector3();
@@ -708,8 +708,8 @@ public class TriangleList
         {
             Triangle.Edge tvleft = left[lofs];
             Triangle.Edge tvright = right[rofs];
-            Vector3 v1 = tvleft.Vertex;
-            Vector3 v2 = tvright.Vertex;
+            Vector3 v1 = tvleft.EdgeLine.Start;
+            Vector3 v2 = tvright.EdgeLine.Start;
 
             if (v1.x >= v2.x)
             {

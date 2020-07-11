@@ -63,10 +63,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\EdgeGroup.cs" />
     <Compile Include="Assets\Hull.cs" />
     <Compile Include="Assets\LineSegment.cs" />
-    <Compile Include="Assets\MakeTriangles.cs" />
     <Compile Include="Assets\Triangle.cs" />
+    <Compile Include="Assets\TriangleArea.cs" />
     <Compile Include="Assets\TriangleList.cs" />
     <Compile Include="Assets\TriangleMesh.cs" />
     <None Include="Assets\VertexColorUnlit.shader" />

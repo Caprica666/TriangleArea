@@ -7,14 +7,8 @@ public class Triangle
     {
         private Triangle mOwner;
         private int mVertIndex;
-        private Vector3 mVertex;
+        private int mEdgeIndex;
         private LineSegment mEdgeLine;
-
-        public Vector3 Vertex
-        {
-            get { return mVertex; }
-            set { mVertex = value; }
-        }
 
         public Triangle Owner
         {
@@ -25,7 +19,11 @@ public class Triangle
         public LineSegment EdgeLine
         {
             get { return mEdgeLine; }
-            set { mEdgeLine = value; }
+        }
+
+        public int EdgeIndex
+        {
+            get { return mEdgeIndex; }
         }
 
         public int VertIndex
@@ -34,36 +32,21 @@ public class Triangle
             set { mVertIndex = value; }
         }
 
-        public Edge(Triangle tri, int vertIndex, LineSegment edgeline)
+        public Edge(Triangle tri, int edgeIndex, int vertIndex, LineSegment line)
         {
             Owner = tri;
             VertIndex = vertIndex;
-            EdgeLine = edgeline;
-            Vertex = edgeline.Start;
-        }
-
-        public Edge(Triangle tri, int vertIndex, Vector3 vtx)
-        {
-            Owner = tri;
-            VertIndex = vertIndex;
-            Vertex = vtx;
-            EdgeLine = null;
-        }
-
-        public Edge(int vertIndex, Vector3 vtx)
-        {
-            Owner = null;
-            VertIndex = vertIndex;
-            Vertex = vtx;
-            EdgeLine = null;
+            mEdgeIndex = edgeIndex;
+            mEdgeLine = line;
         }
     }
 
     public int VertexIndex;
-    public Edge[] Edges = new Edge[3];
     public Color TriColor;
+    public Edge[] Edges = new Edge[3];
+
     private static readonly float EPSILON = 1e-5f;
-    public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
+    public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = 0)
     {
         Init(v1, v2, v3, vindex);
     }
@@ -92,40 +75,48 @@ public class Triangle
         {
             throw new ArgumentException("degenerate triangle");
         }
-        if (v2.x >= v1.x)
+        if (v1.x > v2.x)
         {
-            if (v3.x >= v2.x)
+            if (v3.x < v2.x)       // v1 > v2 > v3
+            {
+                verts[0] = v1;
+                verts[1] = v2;
+                verts[2] = v3;
+            }
+            else if (v1.x > v3.x)  // v1 > v3 > v2
+            {
+                verts[0] = v1;
+                verts[1] = v3;
+                verts[2] = v2;
+            }
+            else                    // v3 > v1 > v2
             {
                 verts[0] = v3;
-                verts[2] = v1;
-            }
-            else if (v1.x >= v3.x)
-            {
-                verts[0] = v2;
                 verts[1] = v1;
-            }
-            else
-            {
-                verts[0] = v2;
-                verts[1] = v3;
-                verts[2] = v1;
+                verts[2] = v2;
             }
         }
-        else if (v3.x > v2.x)
+        else if (v3.x > v2.x)       // v3 > v2 > v1
         {
             verts[0] = v3;
-            verts[1] = v1;
-            verts[2] = v2;
+            verts[1] = v2;
+            verts[2] = v1;
         }
-        else if (v3.x > v1.x)
+        else if (v3.x < v1.x)      // v2 > v1 > v3
         {
-            verts[0] = v3;
+            verts[0] = v2;
             verts[1] = v1;
-            verts[2] = v2;
+            verts[2] = v3;
         }
-        Edges[0] = new Edge(this, 0, new LineSegment(verts[0], verts[1]));
-        Edges[1] = new Edge(this, 1, new LineSegment(verts[1], verts[2]));
-        Edges[2] = new Edge(this, 2, new LineSegment(verts[2], verts[0]));
+        else                        // v2 > v3 > v1
+        {
+            verts[0] = v2;
+            verts[1] = v3;
+            verts[2] = v1;
+        }
+        Edges[0] = new Edge(this, 0, vindex, new LineSegment(verts[0], verts[1]));
+        Edges[1] = new Edge(this, 1, vindex + 1, new LineSegment(verts[1], verts[2]));
+        Edges[2] = new Edge(this, 2, vindex + 2, new LineSegment(verts[2], verts[0]));
         TriColor = new Color(UnityEngine.Random.value,
                             UnityEngine.Random.value,
                             UnityEngine.Random.value, 0.5f);
@@ -133,9 +124,9 @@ public class Triangle
 
     public bool IsDegenerate()
     {
-        if (((Edges[0].Vertex - Edges[1].Vertex).sqrMagnitude < EPSILON) ||
-            ((Edges[1].Vertex - Edges[2].Vertex).sqrMagnitude < EPSILON) ||
-            ((Edges[0].Vertex - Edges[2].Vertex).sqrMagnitude < EPSILON))
+        if (((Edges[0].EdgeLine.Start - Edges[0].EdgeLine.End).sqrMagnitude < EPSILON) ||
+            ((Edges[1].EdgeLine.Start - Edges[1].EdgeLine.End).sqrMagnitude < EPSILON) ||
+            ((Edges[2].EdgeLine.Start - Edges[2].EdgeLine.End).sqrMagnitude < EPSILON))
         {
             return true;
         }
@@ -194,9 +185,9 @@ public class Triangle
         Init(v1, v2, v3, VertexIndex);
     }
 
-    public int Intersects(int edgeindex1, Edge edge2, ref Vector3 isect)
+    public int Intersects(int edgeindex1, LineSegment edge2, ref Vector3 isect)
     {
-        return Edges[edgeindex1].EdgeLine.FindIntersection(edge2.EdgeLine, ref isect);
+        return Edges[edgeindex1].EdgeLine.FindIntersection(edge2, ref isect);
     }
 
     /*
@@ -220,17 +211,19 @@ public class Triangle
         float beta = (-d3.y * (p.x - p3.x) + d3.x * (p.y - p3.y)) / denom;
         float gamma = 1.0f - alpha - beta;
 
-        if (Mathf.Approximately(alpha + beta + gamma, 0))
-        {
-            return -1;
-        }
-        if ((Mathf.Abs(alpha) < 2e-7) ||
-            (Mathf.Abs(beta) < 2e-7) ||
-            (Mathf.Abs(gamma) < 2e-7))
+        if ((alpha >= 0) && (gamma >= 0) && (Math.Abs(beta) < 2e-7))
         {
             return 0;
         }
-        return ((alpha > 0) && (beta > 0) && (gamma > 0)) ? 1 : -1;
+        if ((beta >= 0) && (gamma >= 0) && (Math.Abs(alpha) < 2e-7))
+        {
+            return 0;
+        }
+        if ((alpha >= 0) && (beta >= 0) && (Math.Abs(gamma) < 2e-7))
+        {
+            return 0;
+        }
+        return (alpha > 0) && (beta > 0) && (gamma > 0) ? 1 : -1;
     }
 
     public bool Contains(Triangle t)
@@ -238,6 +231,7 @@ public class Triangle
         int i1 = Contains(t.GetVertex(0));
         int i2 = Contains(t.GetVertex(1));
         int i3 = Contains(t.GetVertex(2));
+
         if ((i1 + i2 + i3) == 0)
         {
             return false;

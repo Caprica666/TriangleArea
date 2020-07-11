@@ -60,11 +60,11 @@ public class Hull : MonoBehaviour
 
         iter.Reset();
         iter.MoveNext();
-        v1 = ((Triangle.Edge)iter.Current).Vertex;
+        v1 = ((Triangle.Edge)iter.Current).EdgeLine.Start;
         mHull.Add((Triangle.Edge)iter.Current);
         mHullVerts.Add(v1);
         iter.MoveNext();
-        v2 = ((Triangle.Edge)iter.Current).Vertex;
+        v2 = ((Triangle.Edge)iter.Current).EdgeLine.Start;
         mHull.Add((Triangle.Edge)iter.Current);
         mHullVerts.Add(v2);
         iter.MoveNext();
@@ -74,13 +74,13 @@ public class Hull : MonoBehaviour
             Triangle.Edge tv3 = (Triangle.Edge)iter.Current;
             Triangle.Edge tv2 = mHull[mHull.Count - 2];
             Triangle.Edge tv1 = mHull[mHull.Count - 1];
-            float cross = Cross2D(tv1.Vertex, tv2.Vertex, tv3.Vertex);
+            float cross = Cross2D(tv1.EdgeLine.Start, tv2.EdgeLine.Start, tv3.EdgeLine.Start);
             int last = mHull.Count - 1;
 
             if (cross > 0)
             {
                 mHull.Add(tv3);
-                mHullVerts.Add(tv3.Vertex);
+                mHullVerts.Add(tv3.EdgeLine.Start);
             }
             else if (last >= 2)
             {
@@ -94,7 +94,7 @@ public class Hull : MonoBehaviour
             else
             {
                 mHull[last] = tv3;
-                mHullVerts[last] = tv3.Vertex;
+                mHullVerts[last] = tv3.EdgeLine.Start;
             }
             mCurLine.positionCount = mHullVerts.Count;
             mCurLine.SetPositions(mHullVerts.ToArray());
@@ -118,11 +118,11 @@ public class Hull : MonoBehaviour
  //       mHullVerts.RemoveAt(start);
         iter.Reset();
         iter.MoveNext();
-        v1 = ((Triangle.Edge) iter.Current).Vertex;
+        v1 = ((Triangle.Edge) iter.Current).EdgeLine.Start;
         mHull.Add((Triangle.Edge) iter.Current);
         mHullVerts.Add(v1);
         iter.MoveNext();
-        v2 = ((Triangle.Edge) iter.Current).Vertex;
+        v2 = ((Triangle.Edge) iter.Current).EdgeLine.Start;
         mHull.Add((Triangle.Edge) iter.Current);
         mHullVerts.Add(v2);
         iter.MoveNext();
@@ -134,9 +134,9 @@ public class Hull : MonoBehaviour
             Triangle.Edge tv3 = (Triangle.Edge) iter.Current;
 
             tv3 = (Triangle.Edge) iter.Current;
-            v1 = tv1.Vertex;
-            v2 = tv2.Vertex;
-            v3 = tv3.Vertex;
+            v1 = tv1.EdgeLine.Start;
+            v2 = tv2.EdgeLine.Start;
+            v3 = tv3.EdgeLine.Start;
             Vector3 u1 = v2 - v1;
             Vector3 u2 = v3 - v2;
             float cross = (u1.x * u2.y) - (u1.y * u2.x);
