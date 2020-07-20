@@ -97,47 +97,5 @@ public class TriangleMesh : MonoBehaviour
         Display();
     }
 
-    public void UpdateTriangle(Triangle tri)
-    {
-        int i = tri.VertexIndex;
-        mVertices[i].Set(tri.Edges[0].EdgeLine.Start.x, tri.Edges[0].EdgeLine.Start.y, 0);
-        mVertices[i + 1].Set(tri.Edges[1].EdgeLine.Start.x, tri.Edges[1].EdgeLine.Start.y, 0);
-        mVertices[i + 2].Set(tri.Edges[2].EdgeLine.Start.x, tri.Edges[2].EdgeLine.Start.y, 0);
-        mColors[i] = tri.TriColor;
-        mColors[i + 1] = tri.TriColor;
-        mColors[i + 2] = tri.TriColor;
-    }
-
-    public List<Triangle.Edge> PrepareTriangles(TriangleList trilist, bool isnew = false)
-    {
-        trilist.Clear();
-        for (int t = 0; t < mIndices.Count; t += 3)
-        {
-            int i1 = mIndices[t];
-            int i2 = mIndices[t + 1];
-            int i3 = mIndices[t + 2];
-            Vector3 v1 = mVertices[i1];
-            Vector3 v2 = mVertices[i2];
-            Vector3 v3 = mVertices[i3];
-            Triangle tri = new Triangle(v1, v2, v3, t);
-
-            if (isnew)
-            {
-                tri.TriColor = mColors[t];
-            }
-            else
-            {
-                Color color = new Color(Random.value, Random.value, Random.value, 0.5f);
-                mColors[t] = color;
-                mColors[t + 1] = color;
-                mColors[t + 2] = color;
-                tri.TriColor = color;
-            }
-            trilist.Add(tri);
-        }
-        trilist.SortByX();
-        return trilist.GetEdges();
-    }
-
 
 }

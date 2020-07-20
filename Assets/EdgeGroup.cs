@@ -17,13 +17,7 @@ public class EdgeGroup
     protected float mMinX = 0;
 
     private static readonly float EPSILON = 1e-5f;
-    public enum ClipResult
-    {
-        OUTSIDE = -1,
-        INSIDE = 0,
-        CLIPPED = 1,
-        INTERSECTED = 2
-    }
+
 
     public EdgeGroup(Triangle tri, TriangleMesh mesh)
     {
@@ -57,7 +51,7 @@ public class EdgeGroup
     {
         if (mTriMesh != null)
         {
-             mTriMesh.Display();
+            mTriMesh.Display();
         }
     }
     public void RemoveMe()
@@ -66,7 +60,7 @@ public class EdgeGroup
         {
             mTriMesh.RemoveTriangle(mTriangle);
             mTriangle = null;
-         }
+        }
     }
 
     public class AddResult : IEnumerator
@@ -117,7 +111,9 @@ public class EdgeGroup
             }
             else
             {
-                ClipResult r = Clip(tri, mTriangle, clipped);
+                TriClip clipper = new TriClip(mTriangle, tri);
+
+                ClipResult r = clipper.Clip(clipped);
                 switch (r)
                 {
                     case ClipResult.CLIPPED:    // tri was clipped
@@ -137,14 +133,10 @@ public class EdgeGroup
             {
                 return result;
             }
-            if (xmin > mMinX)
-            {
-                return ClipResult.OUTSIDE;
-            }
         }
         if (mRightChild != null)            // try to add on the right side
         {
-            if (xmin >= mRightChild.mMinX)  // in right subtree?
+            if (xmax < mRightChild.mMinX)   // clip against right subtree
             {
                 result = mRightChild.AddInternal(tri, clipped);
                 if (result != ClipResult.OUTSIDE)
@@ -152,13 +144,13 @@ public class EdgeGroup
                     return result;
                 }
             }
-            if (xmin >= mMinX)
+            if (xmin >= mMinX)                  // add in right subtree
             {
-                if (xmin < mRightChild.mMinX)
+                if (xmin < mRightChild.mMinX)   // before right child
                 {
                     EdgeGroup g = new EdgeGroup(tri, mRoot);
                     g.mRightChild = mRightChild;
-                    mRightChild = g;            // add before right subtree
+                    mRightChild = g;
                     mTriMesh.AddTriangle(tri);
                     return ClipResult.CLIPPED;
                 }
@@ -191,7 +183,7 @@ public class EdgeGroup
         }
         return ClipResult.OUTSIDE;
     }
-
+#if (false)
     /* 
      * Clips the first triangle against the second.
      * @returns OUTSIDE = triangle 1 outside triangle 2
@@ -220,9 +212,9 @@ public class EdgeGroup
         int c2 = -1;
         int c3 = -1;
         int intersections = 0;
-        int coincident = 0;
         Vector3[] isect = new Vector3[3];
         int mask;
+        int coincident = 0;
 
         inside[0] = tri2.Contains(tri1.GetVertex(0));
         inside[1] = tri2.Contains(tri1.GetVertex(1));
@@ -245,43 +237,43 @@ public class EdgeGroup
         c1 = Clip(tri1, tri2.GetEdge(0).EdgeLine, ref isect[0], ref edgeshit[0], clipped);
         switch (c1)
         {
-            case (int) ClipResult.INSIDE:
-            ++coincident;
-            break;
-
             case 2:           // 2 intersections, was clipped
             return ClipResult.CLIPPED;
 
             case 1:            // only one intersection
             intersections |= V0_ISECT;
             break;
+
+            case (int) ClipResult.INSIDE:
+            ++coincident;
+            break;
         }
         c2 = Clip(tri1, tri2.GetEdge(1).EdgeLine, ref isect[1], ref edgeshit[1], clipped);
         switch (c2)
         {
-            case (int) ClipResult.INSIDE:
-            ++coincident;
-            break;
-
             case 2:           // 2 intersections, was clipped
             return ClipResult.CLIPPED;
 
             case 1:             // 2 intersections, different edges
             intersections |= V1_ISECT;
             break;
+
+            case (int) ClipResult.INSIDE:
+            ++coincident;
+            break;
         }
         c3 = Clip(tri1, tri2.GetEdge(2).EdgeLine, ref isect[2], ref edgeshit[2], clipped);
         switch (c3)
         {
-            case (int) ClipResult.INSIDE:
-            ++coincident;
-            break;
-
             case 2:           // 2 intersections, was clipped
             return ClipResult.CLIPPED;
 
             case 1:             // 2 intersections, different edges
             intersections |= V2_ISECT;
+            break;
+
+            case (int) ClipResult.INSIDE:
+            ++coincident;
             break;
         }
         switch (intersections)
@@ -297,12 +289,18 @@ public class EdgeGroup
                 {
                     return ClipResult.CLIPPED;
                 }
+                return ClipResult.OUTSIDE;
             }
-            else if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect[0], isect[2], clipped))
+            else switch (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect[0], isect[2], clipped))
             {
+                case (int) ClipResult.CLIPPED:
                 return ClipResult.CLIPPED;
+
+                case (int) ClipResult.INSIDE:   // line along the edge
+                ++coincident;
+                break;
             }
-            return ClipResult.OUTSIDE;
+            break;
 
             case V1_ISECT | V2_ISECT:       // only edge 1 intersected
             if (edgeshit[1] == edgeshit[2])
@@ -315,12 +313,18 @@ public class EdgeGroup
                 {
                     return ClipResult.CLIPPED;
                 }
+                return ClipResult.OUTSIDE;
             }
-            else if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect[1], isect[2], clipped))
+            else switch (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect[1], isect[2], clipped))
             {
+                case (int) ClipResult.CLIPPED:
                 return ClipResult.CLIPPED;
+
+                case (int) ClipResult.INSIDE:   // line along the edge
+                ++coincident;
+                break;
             }
-            return ClipResult.OUTSIDE;
+            break;
 
             case V0_ISECT | V1_ISECT:       // only edge 0 intersected
             if (edgeshit[0] == edgeshit[1])
@@ -333,29 +337,32 @@ public class EdgeGroup
                 {
                     return ClipResult.CLIPPED;
                 }
+                return ClipResult.OUTSIDE;
             }
-            else if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect[0], isect[1], clipped))
+            else switch(AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect[0], isect[1], clipped))
             {
+                case (int) ClipResult.CLIPPED:
                 return ClipResult.CLIPPED;
+
+                case (int) ClipResult.INSIDE:   // line along the edge
+                ++coincident;
+                break;
             }
-            return ClipResult.OUTSIDE;
+            break;
         }
- /*       if ((mask == (V0_EDGE | V1_EDGE | V2_EDGE)) && (coincident >= 2))
+        if (coincident == 3)
         {
             return ClipResult.INSIDE;
         }
-        */
         return ClipResult.OUTSIDE;
     }
 
     /*
      * Clips a triangle against a line.
-     * @returns 2 = 2 intersections on this edge
+     * @returns 2 CLIPPED = 2 intersections on this edge
      *          1 = only one edge intersection
-     *          INSIDE = triangle edge coincident with line
-     *          OUTSDIDE = triangle was not clipped by this edge
-     *          COINCIDENT = edge is coincident
-     *          1 = only one edge intersection
+     *          -1 OUTSIDE = triangle was not clipped by this edge
+     *          0 INSIDE = line collinear with edge
      */
     public int Clip(Triangle tri1, LineSegment edge2, ref Vector3 isect, ref int edgeindex, List<Triangle> clipped)
     {
@@ -372,6 +379,7 @@ public class EdgeGroup
         const int TOUCHES_EDGE1 = 4;
         const int HITS_EDGE0 = 2;
         const int TOUCHES_EDGE0 = 1;
+        int r = (int) ClipResult.OUTSIDE;
 
         mask = ((i2 > 0) ? HITS_EDGE2 : 0) | ((i2 == 0) ? TOUCHES_EDGE2 : 0);
         mask |= ((i1 > 0) ? HITS_EDGE1 : 0) | ((i1 == 0) ? TOUCHES_EDGE1 : 0);
@@ -382,135 +390,158 @@ public class EdgeGroup
             case HITS_EDGE0 | HITS_EDGE1:   // first edge intersects input edge
             case HITS_EDGE0 | TOUCHES_EDGE1:
             case TOUCHES_EDGE0 | HITS_EDGE1:
+            case HITS_EDGE0 | HITS_EDGE1 | TOUCHES_EDGE2:
             isect = isect0;
             edgeindex = 0;
-            if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect0, isect1, clipped))
-            {
-                return 2;
-            }
-            return (int) ClipResult.OUTSIDE;
+            return AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect0, isect1, clipped);
 
             case HITS_EDGE0 | HITS_EDGE2:   // third edge intersects input edge
             case HITS_EDGE0 | TOUCHES_EDGE2:
             case TOUCHES_EDGE0 | HITS_EDGE2:
+            case HITS_EDGE0 | HITS_EDGE2 | TOUCHES_EDGE1:
             isect = isect2;
             edgeindex = 2;
-            if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect0, isect2, clipped))
-            {
-                return 2;
-            }
-            return (int) ClipResult.OUTSIDE;
-
-            case HITS_EDGE1 | HITS_EDGE2:  // second edge intersects input edge
-            case HITS_EDGE1 | TOUCHES_EDGE2:
-            case TOUCHES_EDGE1 | HITS_EDGE2:
-            isect = isect1;
-            edgeindex = 1;
-            if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped))
-            {
-                return 2;
-            }
-            return (int) ClipResult.OUTSIDE;
+            return AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect0, isect2, clipped);
 
             case HITS_EDGE1:
             isect = isect1;
             edgeindex = 1;
+            if ((i0 == (int) LineSegment.IntersectResult.COINCIDENT) ||
+                (i2 == (int) LineSegment.IntersectResult.COINCIDENT))    
+            {
+                return AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped);
+            }
             return 1;
+
+            case HITS_EDGE1 | HITS_EDGE2:  // second edge intersects input edge
+            case HITS_EDGE1 | TOUCHES_EDGE2:
+            case TOUCHES_EDGE1 | HITS_EDGE2:
+            case HITS_EDGE1 | HITS_EDGE2 | TOUCHES_EDGE0:
+            isect = isect1;
+            edgeindex = 1;
+            return AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped);
 
             case HITS_EDGE2:
             isect = isect2;
             edgeindex = 2;
+            if ((i0 == (int) LineSegment.IntersectResult.COINCIDENT) ||
+                (i1 == (int) LineSegment.IntersectResult.COINCIDENT))
+            {
+                return AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped);
+            }
             return 1;
 
             case HITS_EDGE0:
             isect = isect0;
             edgeindex = 0;
-            return 1;
-/*
-            case HITS_EDGE0 | TOUCHES_EDGE1 | TOUCHES_EDGE2:
-            if (i1 == (int) LineSegment.IntersectResult.TOUCHING)
+            if ((i2 == (int) LineSegment.IntersectResult.COINCIDENT) ||
+                (i1 == (int) LineSegment.IntersectResult.COINCIDENT))
             {
-                if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect0, isect1, clipped))
-                {
-                    return 2;
-                }
-            }
-            else if (i2 == (int) LineSegment.IntersectResult.TOUCHING)
-            {
-                if (AddTriangles(tri1.GetVertex(0), tri1.GetVertex(1), tri1.GetVertex(2), isect0, isect2, clipped))
-                {
-                    return 2;
-                }
+                return AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped);
             }
             return 1;
 
-            case HITS_EDGE1 | TOUCHES_EDGE0 | TOUCHES_EDGE2:
-            if (i0 == (int) LineSegment.IntersectResult.TOUCHING)
+            case 0:
+            if (i0 == (int) LineSegment.IntersectResult.COINCIDENT)
             {
-                if (AddTriangles(tri1.GetVertex(1), tri1.GetVertex(0), tri1.GetVertex(2), isect0, isect1, clipped))
-                {
-                    return 2;
-                }
-            }
-            else if (i2 == (int) LineSegment.IntersectResult.TOUCHING)
-            {
-                if (AddTriangles(tri1.GetVertex(2), tri1.GetVertex(1), tri1.GetVertex(0), isect1, isect2, clipped))
-                {
-                    return 2;
-                }
-            }
-            return 1;
-
-            default:
-            if ((i0 == (int) LineSegment.IntersectResult.COINCIDENT) ||
-                (i1 == (int) LineSegment.IntersectResult.COINCIDENT) ||
-                (i2 == (int) LineSegment.IntersectResult.COINCIDENT))
-            {
+                edgeindex = 0;
                 return (int) ClipResult.INSIDE;
             }
-            */
+            if (i1 == (int) LineSegment.IntersectResult.COINCIDENT)
+            {
+                edgeindex = 1;
+                return (int) ClipResult.INSIDE;
+            }
+            if (i2 == (int) LineSegment.IntersectResult.COINCIDENT)
+            {
+                edgeindex = 2;
+                return (int) ClipResult.INSIDE;
+            }
+            break;
         }
         return (int) ClipResult.OUTSIDE;
     }
+#endif
 
-    bool AddTriangles(Vector3 va, Vector3 vb, Vector3 vc, Vector3 isect1, Vector3 isect2, List<Triangle> clipped)
+    /*
+     * 2 CLIPPED = triangle was clipped
+     * 0 INSIDE = intersects 2 vertices
+     * -1 OUTSIDE = intersection points are the same
+     */
+    int AddTriangles(Vector3 va, Vector3 vb, Vector3 vc, Vector3 isect1, Vector3 isect2, List<Triangle> clipped)
     {
         int count = (mTriMesh != null) ? mTriMesh.VertexCount : 0;
         Vector3 temp1;
         Vector3 temp2;
+        Triangle tri;
+        const int ISECTA = 1;
+        const int ISECTB = 2;
+        const int ISECTC = 4;
+        int mask = ISECTA | ISECTB | ISECTC;
 
         temp1 = isect1 - isect2;
         if (temp1.sqrMagnitude <= EPSILON)
         {
-            return false;
+            return -1;
         }
         temp1 = va - isect2;
         temp2 = va - isect1;
-        if ((temp1.sqrMagnitude <= EPSILON) ||
-            (temp2.sqrMagnitude <= EPSILON))
+        if ((temp1.sqrMagnitude > EPSILON) &&
+            (temp2.sqrMagnitude > EPSILON))
         {
-            return false;
+            mask &= ~ISECTA;
         }
         temp1 = vb - isect2;
         temp2 = vb - isect1;
         if ((temp1.sqrMagnitude > EPSILON) &&
             (temp2.sqrMagnitude > EPSILON))
         {
-            Triangle tri = new Triangle(isect1, isect2, va);
-            Triangle tri1 = new Triangle(vb, isect1, isect2, count);
-
-            clipped.Add(tri);
-            clipped.Add(tri1);
-            temp1 = vc - isect2;
-            temp2 = vc - isect1;
-            if ((temp1.sqrMagnitude > EPSILON) &&
-                (temp2.sqrMagnitude > EPSILON))
-            {
-                Triangle tri2 = new Triangle(vb, isect2, vc, count);
-                clipped.Add(tri2);
-            }
-            return true;
+            mask &= ~ISECTB;
         }
-        return false;
+        temp1 = vc - isect2;
+        temp2 = vc - isect1;
+        if ((temp1.sqrMagnitude > EPSILON) &&
+            (temp2.sqrMagnitude > EPSILON))
+        {
+            mask &= ~ISECTC;
+        }
+        switch (mask)
+        {
+            case ISECTA:
+            tri = new Triangle(vb, isect1, isect2, count);
+            clipped.Add(tri);
+            tri = new Triangle(vc, isect1, isect2, count);
+            clipped.Add(tri);
+            return (int) ClipResult.CLIPPED;
+
+            case ISECTB:
+            tri = new Triangle(va, isect1, isect2, count);
+            clipped.Add(tri);
+            tri = new Triangle(vc, isect1, isect2, count);
+            clipped.Add(tri);
+            return (int) ClipResult.CLIPPED;
+
+            case ISECTC:
+            tri = new Triangle(va, isect1, isect2, count);
+            clipped.Add(tri);
+            tri = new Triangle(vb, isect1, isect2, count);
+            clipped.Add(tri);
+            return (int) ClipResult.CLIPPED;
+
+            case ISECTA | ISECTB:
+            case ISECTA | ISECTC:
+            case ISECTB | ISECTC:
+            return (int) ClipResult.INSIDE;
+
+            case 0:
+            tri = new Triangle(va, isect1, isect2, count);
+            clipped.Add(tri);
+            tri = new Triangle(vb, isect1, isect2, count);
+            clipped.Add(tri);
+            tri = new Triangle(vb, vc, isect2, count);
+            clipped.Add(tri);
+            return (int) ClipResult.CLIPPED;
+        }
+        return -1;
     }
 }
