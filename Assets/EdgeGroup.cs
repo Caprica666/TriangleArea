@@ -13,6 +13,7 @@ public class EdgeGroup
     protected Triangle mTriangle = null;
     protected EdgeGroup mRoot = null;
     protected TriangleMesh mTriMesh;
+    protected TriangleMesh mClipMesh = null;
     protected float mMaxX = 0;
     protected float mMinX = 0;
 
@@ -30,6 +31,17 @@ public class EdgeGroup
         mRoot = this;
     }
 
+    public EdgeGroup(Triangle tri, TriangleMesh mesh, TriangleMesh debugmesh)
+    {
+        mTriMesh = mesh;
+        mClipMesh = debugmesh;
+        mTriangle = tri;
+        mMinX = tri.GetVertex(0).x;
+        mMaxX = (tri.GetVertex(1).x >= tri.GetVertex(2).x) ?
+                  tri.GetVertex(1).x : tri.GetVertex(2).x;
+        mTriMesh.AddTriangle(tri);
+        mRoot = this;
+    }
     public EdgeGroup(Triangle tri, EdgeGroup root)
     {
         mTriMesh = root.mTriMesh;
@@ -52,6 +64,10 @@ public class EdgeGroup
         if (mTriMesh != null)
         {
             mTriMesh.Display();
+        }
+        if (mRoot.mClipMesh != null)
+        {
+            mRoot.mClipMesh.Display();
         }
     }
     public void RemoveMe()
@@ -92,7 +108,40 @@ public class EdgeGroup
         ClipResult r = AddInternal(tri, clipped);
         foreach (Triangle t in clipped)
         {
+            int vindex1 = t.VertexIndex;
             yield return mRoot.Add(t);
+            if (mRoot.mClipMesh != null)
+            {
+ //               int vindex2 = t.VertexIndex;
+ //               t.VertexIndex = vindex1;
+ //               mClipMesh.RemoveTriangle(t);
+ //               t.VertexIndex = vindex1;
+                mRoot.mClipMesh.Display();
+                yield return new WaitForEndOfFrame();
+                yield return new WaitForEndOfFrame();
+                yield return new WaitForEndOfFrame();
+                yield return new WaitForEndOfFrame();
+            }
+        }
+    }
+
+    protected void AddTriangle(Triangle tri)
+    {
+        if (mRoot.mClipMesh != null)
+        {
+            mRoot.mClipMesh.RemoveTriangle(tri);
+        }
+        if (mTriMesh != null)
+        {
+            mTriMesh.AddTriangle(tri);
+        }
+    }
+
+    protected void RemoveTriangle(Triangle tri)
+    {
+        if (mTriMesh != null)
+        {
+            mTriMesh.RemoveTriangle(tri);
         }
     }
 
@@ -106,8 +155,7 @@ public class EdgeGroup
         {
             if (tri.Contains(mTriangle))        // mTriangle inside tri
             {
-                mTriMesh.RemoveTriangle(mTriangle);
-                mTriangle = null;
+                RemoveMe();
             }
             else
             {
@@ -117,7 +165,18 @@ public class EdgeGroup
                 switch (r)
                 {
                     case ClipResult.CLIPPED:    // tri was clipped
+                    if (mRoot.mClipMesh != null)
+                    {
+                        mRoot.mClipMesh.RemoveTriangle(tri);
+                        foreach (Triangle t in clipped)
+                        {
+                            mRoot.mClipMesh.AddTriangle(t);
+                        }
+                    }
+                    return r;
+
                     case ClipResult.INSIDE:     // tri inside another triangle
+                    mRoot.mClipMesh.RemoveTriangle(tri);
                     return r;
                 }
             }
@@ -151,7 +210,7 @@ public class EdgeGroup
                     EdgeGroup g = new EdgeGroup(tri, mRoot);
                     g.mRightChild = mRightChild;
                     mRightChild = g;
-                    mTriMesh.AddTriangle(tri);
+                    AddTriangle(tri);
                     return ClipResult.CLIPPED;
                 }
                 return ClipResult.OUTSIDE;
@@ -160,7 +219,7 @@ public class EdgeGroup
         else if (xmin >= mMinX)             // add as the right subtree
         {
             mRightChild = new EdgeGroup(tri, mRoot);
-            mTriMesh.AddTriangle(tri);
+            AddTriangle(tri);
             return ClipResult.CLIPPED;
         }
         else if (mLeftChild != null)
@@ -170,7 +229,7 @@ public class EdgeGroup
                 EdgeGroup g = new EdgeGroup(tri, mRoot);
                 g.mLeftChild = mLeftChild;
                 mLeftChild = g;
-                mTriMesh.AddTriangle(tri);
+                AddTriangle(tri);
                 return ClipResult.CLIPPED;
             }
             return ClipResult.OUTSIDE;
@@ -178,7 +237,7 @@ public class EdgeGroup
         else                               // add as the left subtree
         {
             mLeftChild = new EdgeGroup(tri, mRoot);
-            mTriMesh.AddTriangle(tri);
+            AddTriangle(tri);
             return ClipResult.CLIPPED;
         }
         return ClipResult.OUTSIDE;

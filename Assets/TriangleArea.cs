@@ -127,7 +127,7 @@ public class TriangleArea : MonoBehaviour
         mTriMesh.VertexCount = TriangleCount * 3;
         mClipMesh.VertexCount = TriangleCount * 3;
         mClipMesh.GenerateMesh(mSaved);
-        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh);
+        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh, mClipMesh);
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
@@ -150,13 +150,14 @@ public class TriangleArea : MonoBehaviour
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh);
+        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh, mClipMesh);
         for (int i = 1; i < mSaved.Count; ++i)
         {
             Triangle t = mSaved[i];
             yield return mEdgeGroup.Add(t);
         }
         mTriMesh.Display();
+        mClipMesh.Display();
     }
 
 }
