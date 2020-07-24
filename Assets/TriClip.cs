@@ -15,8 +15,11 @@ public class EdgeClip : Comparer<EdgeClip>
     public Vector3 IntersectionPoint;
     public Vector3 IsectBaryCoords;
     public const int INTERSECTING = 1;
-    public const int OUTSIDE = 2;
-    public const int COINCIDENT = 4;
+    public const int VERTEX = 2;
+    public const int OUTSIDE = 4;
+    public const int COINCIDENT = 8;
+    public const float EPSILON = 2e-6f;
+
 
     public EdgeClip(Triangle clipper, Triangle clipped, int clipperedge, int clippededge) 
     {
@@ -59,22 +62,22 @@ public class EdgeClip : Comparer<EdgeClip>
         bool denomPositive = (f > 0);
 
         // check to see if they are coincident
-        if (f == 0)
+        if (Math.Abs(f) < EPSILON)
         {
-            if (d == 0)
+            if (Math.Abs(d) < EPSILON)
             {
                 return COINCIDENT;
             }
-            return 0;
-        }
-        if (d == f)
-        {
             return 0;
         }
         float t = d / f;
         IntersectionPoint = Clipped.GetVertex(ClippedEdgeStart) + (t * A);
         Clipped.Bary(IntersectionPoint, ref IsectBaryCoords);
 
+        if ((d == f) || (e == f))
+        {
+            return INTERSECTING | VERTEX;
+        }
         if (f > 0)
         {
             if ((d < 0) || (d > f))
@@ -164,6 +167,7 @@ public class TriClip
             case V0_IN | V1_IN | V2_EDGE:       // two inside, 1 on the edge
             case V0_IN | V2_IN | V1_EDGE:
             case V1_IN | V2_IN | V0_EDGE:
+
             case V0_EDGE | V1_EDGE | V2_EDGE:
             return ClipResult.INSIDE;           // Clipped inside Clilpper
         }
@@ -246,12 +250,11 @@ public class TriClip
             {
                 continue;
             }
- /*           if (s == EdgeClip.COINCIDENT)
+            if (s == EdgeClip.COINCIDENT)
             {
                 ++NumCoincident;
                 EdgesClipped.Add(clipstatus.HashKey, clipstatus);
             }
-            */
             else if (s == EdgeClip.INTERSECTING)     // clipper edge intersects 2 clipped edges
             {
                 ++NumIntersected;
@@ -262,8 +265,8 @@ public class TriClip
                 }
                 ec1 = clipstatus;
             }
-            else if ((Clipped.Contains(Clipper.GetVertex(clipperedge)) > 0) ||
-                     (Clipped.Contains(Clipper.GetVertex(clipstatus.ClipperEdgeEnd)) > 0))
+            else if ((Clipped.Contains(Clipper.GetVertex(clipperedge)) >= 0) ||
+                     (Clipped.Contains(Clipper.GetVertex(clipstatus.ClipperEdgeEnd)) >= 0))
             {
                 ++NumIntersected;
                 EdgesClipped.Add(clipstatus.HashKey, clipstatus);

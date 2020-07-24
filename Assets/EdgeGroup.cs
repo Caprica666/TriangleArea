@@ -195,7 +195,7 @@ public class EdgeGroup
         }
         if (mRightChild != null)            // try to add on the right side
         {
-            if (xmax < mRightChild.mMinX)   // clip against right subtree
+            if (xmax <= mRightChild.mMinX)   // clip against right subtree
             {
                 result = mRightChild.AddInternal(tri, clipped);
                 if (result != ClipResult.OUTSIDE)
@@ -205,7 +205,7 @@ public class EdgeGroup
             }
             if (xmin >= mMinX)                  // add in right subtree
             {
-                if (xmin < mRightChild.mMinX)   // before right child
+                if (xmin <= mRightChild.mMinX)  // before right child
                 {
                     EdgeGroup g = new EdgeGroup(tri, mRoot);
                     g.mRightChild = mRightChild;
