@@ -8,9 +8,10 @@ public class Triangle
     public int VertexIndex;
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
+    public Edge[] Edges = new Edge[3];
 
     private static readonly float EPSILON = 1e-5f;
-    public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = 0)
+    public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = -1)
     {
         Init(v1, v2, v3, vindex);
     }
@@ -33,44 +34,47 @@ public class Triangle
         {
             if (v3.x < v2.x)       // v1 > v2 > v3
             {
-                Vertices[0] = v1;
+                Vertices[0] = v3;
                 Vertices[1] = v2;
-                Vertices[2] = v3;
+                Vertices[2] = v1;
             }
             else if (v1.x > v3.x)  // v1 > v3 > v2
             {
-                Vertices[0] = v1;
+                Vertices[0] = v2;
                 Vertices[1] = v3;
-                Vertices[2] = v2;
+                Vertices[2] = v1;
             }
             else                    // v3 > v1 > v2
             {
-                Vertices[0] = v3;
+                Vertices[0] = v2;
                 Vertices[1] = v1;
-                Vertices[2] = v2;
+                Vertices[2] = v3;
             }
         }
         else if (v3.x > v2.x)       // v3 > v2 > v1
         {
-            Vertices[0] = v3;
+            Vertices[0] = v1;
             Vertices[1] = v2;
-            Vertices[2] = v1;
+            Vertices[2] = v3;
         }
         else if (v3.x < v1.x)      // v2 > v1 > v3
         {
-            Vertices[0] = v2;
+            Vertices[0] = v3;
             Vertices[1] = v1;
-            Vertices[2] = v3;
+            Vertices[2] = v2;
         }
         else                        // v2 > v3 > v1
         {
-            Vertices[0] = v2;
+            Vertices[0] = v1;
             Vertices[1] = v3;
-            Vertices[2] = v1;
+            Vertices[2] = v2;
         }
         TriColor = new Color(UnityEngine.Random.value,
                             UnityEngine.Random.value,
                             UnityEngine.Random.value, 0.5f);
+        Edges[0] = new Edge(this, 0);
+        Edges[1] = new Edge(this, 1);
+        Edges[2] = new Edge(this, 2);
     }
 
     public bool IsDegenerate()
@@ -135,20 +139,7 @@ public class Triangle
         bool alphais0 = Math.Abs(alpha) < 2e-7;
         bool betais0 = Math.Abs(beta) < 2e-7;
         bool gammais0 = Math.Abs(gamma) < 2e-7;
-/*
-        if ((Math.Abs(1 - alpha) < 2e-7) && betais0)
-        {
-            return 0;
-        }
-        if ((Math.Abs(1 - beta) < 2e-7) && alphais0)
-        {
-            return 0;
-        }
-        if ((Math.Abs(1 - gamma) < 2e-7) && (beta >= 0) && alphais0)
-        {
-            return 0;
-        }
-        */
+
         if ((alpha >= 0) && (gamma >= 0) && betais0)
         {
             return 0;

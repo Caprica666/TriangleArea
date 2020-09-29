@@ -4,17 +4,18 @@ using UnityEngine;
 
 public class TriangleArea : MonoBehaviour
 {
-    public bool Test;
     public bool New;
+    public bool PlaneSweep;
     public int TriangleCount = 2;
 
     private float mMaxDist = 5;
     private float mMinDist = 1;
     private TriangleMesh mTriMesh;
     private TriangleMesh mClipMesh;
-    private EdgeGroup mEdgeGroup;
     private List<Triangle> mSaved = null;
     private Rect mBounds = new Rect(0, 0, 6, 6);
+    private VertexGroup mVertexGroup;
+    private LineMesh mLinesToRender;
 
     // Start is called before the first frame update
     void Start()
@@ -24,37 +25,27 @@ public class TriangleArea : MonoBehaviour
 
     private void Init()
     {
+        GameObject lines = GameObject.Find("Lines");
         GameObject cliplist = GameObject.Find("ClipList");
-        mTriMesh = gameObject.GetComponent<TriangleMesh>() as TriangleMesh;
-        mClipMesh = cliplist.GetComponent<TriangleMesh>() as TriangleMesh;
-        Triangle t1 = new Triangle(new Vector3(2, 0, 0),
-                                  new Vector3(0, 2, 0),
-                                  new Vector3(-2, 0, 0), 0);
-        Triangle t2 = new Triangle(new Vector3(0, -1, 0),
-                                  new Vector3(1.5f, 3, 0),
-                                  new Vector3(3, -1, 0), 3);
-/*
-        Triangle t3 = new Triangle(new Vector3(-0.6508294f, -2.309343f, 0),
-                                   new Vector3(1.754553f, 0.9481241f, 0),
-                                   new Vector3(0.4796473f, 0.6368812f, 0), 6);
-                                   */
-        mSaved = new List<Triangle> { t1, t2 };
-        mClipMesh.VertexCount = TriangleCount * 3;
-        mClipMesh.GenerateMesh(mSaved);
+        mTriMesh = gameObject.GetComponent<TriangleMesh>();
+        mClipMesh = cliplist.GetComponent<TriangleMesh>();
+        mLinesToRender = new LineMesh(lines.GetComponent<MeshFilter>().mesh);
+        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
     }
 
     private void Update()
     {
-        if (Test)
-        {
-            Test = false;
-            mTriMesh.Clear();
-            mClipMesh.Clear();
-            StartCoroutine("PlaneSweepTest");
-        }
-        else if (New)
+        if (New)
         {
             New = false;
+            mSaved = NewTriangles(mBounds, TriangleCount * 3);
+            mTriMesh.VertexCount = TriangleCount * 3;
+            mTriMesh.GenerateMesh(mSaved);
+            mClipMesh.VertexCount = TriangleCount * 3;
+        }
+        else if (PlaneSweep)
+        {
+            PlaneSweep = false;
             StartCoroutine(PlaneSweepArea());
         }
     }
@@ -121,43 +112,27 @@ public class TriangleArea : MonoBehaviour
         return true;
     }
 
-    IEnumerator PlaneSweepTest()
-    {
-        mTriMesh.Clear();
-        mTriMesh.VertexCount = TriangleCount * 3;
-        mClipMesh.VertexCount = TriangleCount * 3;
-        mClipMesh.GenerateMesh(mSaved);
-        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh, mClipMesh);
-        yield return new WaitForEndOfFrame();
-        yield return new WaitForEndOfFrame();
-        yield return new WaitForEndOfFrame();
-        for (int i = 1; i < mSaved.Count; ++i)
-        {
-            Triangle t = mSaved[i];
-            yield return mEdgeGroup.Add(t);
-        }
-        mTriMesh.Display();
-    }
-
     IEnumerator PlaneSweepArea()
     {
-        mSaved = NewTriangles(mBounds, TriangleCount * 3);
         mTriMesh.VertexCount = TriangleCount * 3;
         mClipMesh.VertexCount = TriangleCount * 3;
         mTriMesh.Clear();
         mClipMesh.Clear();
-        mClipMesh.GenerateMesh(mSaved);
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        mEdgeGroup = new EdgeGroup(mSaved[0], mTriMesh, mClipMesh);
-        for (int i = 1; i < mSaved.Count; ++i)
+        foreach (Triangle t in mSaved)
         {
-            Triangle t = mSaved[i];
-            yield return mEdgeGroup.Add(t);
+            t.VertexIndex = -1;
         }
+        mVertexGroup.AddTriangles(mSaved);
+        mLinesToRender.Clear();
         mTriMesh.Display();
         mClipMesh.Display();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame();
+        StartCoroutine(mVertexGroup.ShowIntersections());
     }
 
 }

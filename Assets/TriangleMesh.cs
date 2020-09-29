@@ -10,7 +10,6 @@ public class TriangleMesh : MonoBehaviour
     private List<Color> mColors;
     private List<int> mIndices;
     private Mesh mMesh;
-    private Rect mBounds;
 
     public void Awake()
     {
@@ -52,6 +51,24 @@ public class TriangleMesh : MonoBehaviour
     public int AddTriangle(Triangle tri)
     {
         int index = mVertices.Count;
+
+        if (tri.VertexIndex >= 0)
+        {
+            if (tri.VertexIndex < index)
+            {
+                Color c = tri.TriColor;
+                c.a = 0.5f;
+                index = tri.VertexIndex;
+                mVertices[index] = tri.GetVertex(0);
+                mVertices[index + 1] = tri.GetVertex(1);
+                mVertices[index + 2] = tri.GetVertex(2);
+                mColors[index] = c;
+                mColors[index + 1] = c;
+                mColors[index + 2] = c;
+                return index;
+            }
+            index = tri.VertexIndex;
+        }
         tri.VertexIndex = index;
         mVertices.Add(tri.GetVertex(0));
         mVertices.Add(tri.GetVertex(1));
@@ -77,10 +94,7 @@ public class TriangleMesh : MonoBehaviour
 
     public void GenerateMesh(List<Triangle> trilist)
     {
-        mMesh.Clear();
-        mIndices.Clear();
-        mVertices.Clear();
-        mColors.Clear();
+        Clear();
         foreach (Triangle t in trilist)
         {
             t.VertexIndex = mVertices.Count;
