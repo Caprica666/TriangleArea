@@ -199,35 +199,43 @@ public class TriClip
                 return ClipResult.OUTSIDE;
             }
         }
+        else if ((edges[0].Status & EdgeClip.COINCIDENT) != 0)
+        {
+            return (Inside[(edges[0].ClippedEdgeEnd + 1) % 3] > 0) ?
+                    ClipResult.INSIDE : ClipResult.OUTSIDE;
+//            return Clipper.Tri.Contains(Clipped.Tri) ? ClipResult.INSIDE : ClipResult.OUTSIDE;
+        }
         /*
          * If only one edge of the Clipped triangle intersects,
          * clip against the adjacent Clipper edge.
          * If the adjacent edge clips two edges, return those results.
          * If both Clipper edges each intersect, combine these results.
          */
-        else if (edges[1] != null)
+        else if ((edges[1] == null) ||
+                ((edges[1].Status & EdgeClip.INTERSECTING) == 0))
         {
-            if ((edges[1].Status & EdgeClip.INTERSECTING) == 0)
+            EdgeClip[] edges2 = ClipAgainstEdge(adjacent);
+            if ((edges2 != null) &&
+                ((edges2[0].Status & EdgeClip.INTERSECTING) != 0))
             {
-                EdgeClip[] edges2 = ClipAgainstEdge(adjacent);
-                if ((edges2 != null) &&
-                    ((edges2[0].Status & EdgeClip.INTERSECTING) != 0))
+                if ((edges2[1] != null) &&
+                    ((edges2[1].Status & EdgeClip.INTERSECTING) != 0))
                 {
-                    if ((edges2[1] != null) &&
-                        ((edges2[1].Status & EdgeClip.INTERSECTING) != 0))
-                    {
-                        edges = edges2;
-                    }
-                    else
-                    {
-                        edges[1] = edges2[0];
-                    }
+                    edges = edges2;
+                }
+                else
+                {
+                    edges[1] = edges2[0];
                 }
             }
         }
         if (edges[1] == null)
         {
             return ClipResult.OUTSIDE;
+        }
+        if ((edges[0].Status & edges[1].Status) == EdgeClip.VERTEX)
+        {
+            return Clipper.Tri.Contains(Clipped.Tri) ? ClipResult.INSIDE : ClipResult.OUTSIDE;
         }
         ClipResult r = ClipTriangles(edges[0], edges[1], clipped);
         switch (r)
@@ -251,7 +259,8 @@ public class TriClip
             alledges[i] = new EdgeClip(clipper, Clipped.Tri.Edges[i]);
             clipstatus[i] = alledges[i].Clip();
 
-            if ((clipstatus[i] & EdgeClip.INTERSECTING) != 0)
+            if (((clipstatus[i] & EdgeClip.INTERSECTING) != 0) &&
+                ((clipstatus[i] & EdgeClip.OUTSIDE) == 0))
             {
                 if (++intersected > 1)
                 {
@@ -265,26 +274,14 @@ public class TriClip
         {
             return clipedges;
         }
-/*        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 3; ++i)
         {
-            switch (clipstatus[i])
+            if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
             {
-                case EdgeClip.INTERSECTING | EdgeClip.VERTEX:
-                case EdgeClip.INTERSECTING | EdgeClip.OUTSIDE:
-                clipedges[1] = alledges[i];
+                clipedges[0] = alledges[i];
                 return clipedges;
-
-                case EdgeClip.COINCIDENT:
-                if ((((clipedges[0].Clipped.EdgeIndex + 1) % 3) == alledges[i].Clipped.EdgeIndex) ||
-                    (((alledges[i].Clipped.EdgeIndex - 1) % 3) == clipedges[0].Clipped.EdgeIndex))
-                {
-                    clipedges[1] = alledges[i];
-                    return clipedges;
-                }
-                break;
             }
         }
-        */
         return null;
     }
 

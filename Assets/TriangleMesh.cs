@@ -51,12 +51,13 @@ public class TriangleMesh : MonoBehaviour
     public int AddTriangle(Triangle tri)
     {
         int index = mVertices.Count;
+        Color c;
 
+        tri.TriColor.a = 0.5f;
+        c = tri.TriColor;
         if ((tri.VertexIndex >= 0) &&
            ((tri.VertexIndex + 2) < index))
          {
-            Color c = tri.TriColor;
-            c.a = 0.5f;
             index = tri.VertexIndex;
             mVertices[index] = tri.GetVertex(0);
             mVertices[index + 1] = tri.GetVertex(1);
@@ -73,14 +74,10 @@ public class TriangleMesh : MonoBehaviour
         mIndices.Add(index);
         mIndices.Add(index + 1);
         mIndices.Add(index + 2);
-        mColors.Add(tri.TriColor);
-        mColors.Add(tri.TriColor);
-        mColors.Add(tri.TriColor);
-        if (tri.VertexIndex + 2 > mColors.Count)
-        {
-            return -1;
-        }
-        return tri.VertexIndex;
+        mColors.Add(c);
+        mColors.Add(c);
+        mColors.Add(c);
+        return index;
     }
 
     public int RemoveTriangle(Triangle tri)

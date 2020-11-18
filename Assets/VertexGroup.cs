@@ -225,7 +225,7 @@ public class VertexGroup
         {
             case ClipResult.CLIPPED:    // tri was clipped
             trisClipped[0].VertexIndex = clippedEdge.Tri.VertexIndex;
-            RemoveTri(clippedEdge.Tri, false);
+            RemoveTri(clippedEdge.Tri, true);
             AddTriangles(trisClipped, true);
             return true;
 
@@ -248,7 +248,6 @@ public class VertexGroup
 
     public bool CheckForDelete(VertexEvent e, Vector3 p)
     {
-        mEventQ.Remove(e);
         if (p == e.TriEdge.Tri.GetVertex(2))
         {
             Triangle t = e.TriEdge.Tri;
@@ -256,10 +255,11 @@ public class VertexGroup
             mClipMesh.AddTriangle(new Triangle(t));
             return true;
         }
-        else if (e.Line.End == p)
+        if (e.Line.End == p)
         {
             RemoveActive(e.TriEdge);
         }
+        mEventQ.Remove(e);
         return false;
     }
 
@@ -268,7 +268,6 @@ public class VertexGroup
         List<VertexEvent> collected = new List<VertexEvent>();
         VertexEvent nextEvent = mEventQ.Min;
         VecCompare vcompare = new VecCompare();
-        int order = 0;
 
         if (nextEvent == null)
         {
@@ -277,7 +276,7 @@ public class VertexGroup
         point = nextEvent.Point;
         foreach (VertexEvent e in mEventQ)
         {
-            order = vcompare.Compare(e.Point, point);
+            int order = vcompare.Compare(e.Point, point);
             if (order != 0)
             {
                 break;
@@ -285,17 +284,6 @@ public class VertexGroup
             collected.Add(e);
         }
         return collected;
-    }
-
-    public void RemoveTri(List<VertexEvent> edges, Triangle tri)
-    {
-        for (int i = 0; i < edges.Count; ++i)
-        {
-            if (edges[i].TriEdge.Tri == tri)
-            {
-                edges.RemoveAt(i--);
-            }
-        }
     }
 
     public bool Process(LineEnumerator lineiter)
