@@ -39,9 +39,13 @@ public class TriangleArea : MonoBehaviour
         {
             New = false;
             mSaved = NewTriangles(mBounds, TriangleCount * 3);
+            mTriMesh.Clear();
+            mClipMesh.Clear();
+            mLinesToRender.Clear();
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;
+            mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
         }
         else if (PlaneSweep)
         {

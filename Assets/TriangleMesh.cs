@@ -52,40 +52,46 @@ public class TriangleMesh : MonoBehaviour
     {
         int index = mVertices.Count;
 
-        if (tri.VertexIndex >= 0)
-        {
-            if (tri.VertexIndex < index)
-            {
-                Color c = tri.TriColor;
-                c.a = 0.5f;
-                index = tri.VertexIndex;
-                mVertices[index] = tri.GetVertex(0);
-                mVertices[index + 1] = tri.GetVertex(1);
-                mVertices[index + 2] = tri.GetVertex(2);
-                mColors[index] = c;
-                mColors[index + 1] = c;
-                mColors[index + 2] = c;
-                return index;
-            }
+        if ((tri.VertexIndex >= 0) &&
+           ((tri.VertexIndex + 2) < index))
+         {
+            Color c = tri.TriColor;
+            c.a = 0.5f;
             index = tri.VertexIndex;
+            mVertices[index] = tri.GetVertex(0);
+            mVertices[index + 1] = tri.GetVertex(1);
+            mVertices[index + 2] = tri.GetVertex(2);
+            mColors[index] = c;
+            mColors[index + 1] = c;
+            mColors[index + 2] = c;
+            return index;
         }
         tri.VertexIndex = index;
         mVertices.Add(tri.GetVertex(0));
         mVertices.Add(tri.GetVertex(1));
         mVertices.Add(tri.GetVertex(2));
-        mIndices.Add(index++);
-        mIndices.Add(index++);
-        mIndices.Add(index++);
+        mIndices.Add(index);
+        mIndices.Add(index + 1);
+        mIndices.Add(index + 2);
         mColors.Add(tri.TriColor);
         mColors.Add(tri.TriColor);
         mColors.Add(tri.TriColor);
-        return index;
+        if (tri.VertexIndex + 2 > mColors.Count)
+        {
+            return -1;
+        }
+        return tri.VertexIndex;
     }
 
     public int RemoveTriangle(Triangle tri)
     {
         Color c = tri.TriColor;
         c.a = 0;
+        if ((tri.VertexIndex < 0) || 
+            (tri.VertexIndex + 2 > mColors.Count))
+        {
+            return -1;
+        }
         mColors[tri.VertexIndex] = c;
         mColors[tri.VertexIndex + 1] = c;
         mColors[tri.VertexIndex + 2] = c;

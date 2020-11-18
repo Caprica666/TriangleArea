@@ -9,6 +9,7 @@ public class Triangle
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
     public Edge[] Edges = new Edge[3];
+    public Bounds BoundBox = new Bounds();
 
     private static readonly float EPSILON = 1e-5f;
     public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = -1)
@@ -24,7 +25,7 @@ public class Triangle
         Init(new Vector3(v1.x, v1.y, v1.z),
              new Vector3(v2.x, v2.y, v2.z),
              new Vector3(v3.x, v3.y, v3.z),
-             source.VertexIndex);
+             -1);
     }
 
     private void Init(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
@@ -75,6 +76,9 @@ public class Triangle
         Edges[0] = new Edge(this, 0);
         Edges[1] = new Edge(this, 1);
         Edges[2] = new Edge(this, 2);
+        BoundBox.Encapsulate(v1);
+        BoundBox.Encapsulate(v2);
+        BoundBox.Encapsulate(v3);
     }
 
     public bool IsDegenerate()
@@ -187,9 +191,9 @@ public class Triangle
         int i2 = Contains(t.GetVertex(1));
         int i3 = Contains(t.GetVertex(2));
 
-        if ((i1 + i2 + i3) == 0)
+        if ((i1 | i2 | i3) == 0)
         {
-            return false;
+            return true;
         }
         if ((i1 >= 0) &&
             (i2 >= 0) &&
