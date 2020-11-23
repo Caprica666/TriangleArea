@@ -83,15 +83,17 @@ public class TriangleMesh : MonoBehaviour
     public int RemoveTriangle(Triangle tri)
     {
         Color c = tri.TriColor;
-        c.a = 0;
-        if ((tri.VertexIndex < 0) || 
+        if ((c.a == 0) ||
+            (tri.VertexIndex < 0) || 
             (tri.VertexIndex + 2 > mColors.Count))
         {
             return -1;
         }
+        c.a = 0;
         mColors[tri.VertexIndex] = c;
         mColors[tri.VertexIndex + 1] = c;
         mColors[tri.VertexIndex + 2] = c;
+        tri.TriColor = c;
         return tri.VertexIndex;
     }
 

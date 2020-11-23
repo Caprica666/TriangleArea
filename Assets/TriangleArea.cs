@@ -6,6 +6,7 @@ public class TriangleArea : MonoBehaviour
 {
     public bool New;
     public bool PlaneSweep;
+    public bool Test;
     public int TriangleCount = 2;
 
     private float mMaxDist = 5;
@@ -45,11 +46,28 @@ public class TriangleArea : MonoBehaviour
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;
-            mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
+        }
+        else if (Test)
+        {
+            Test = false;
+            Triangle t1 = new Triangle(new Vector3(-4, 0, 0),
+                                      new Vector3(0, -1, 0),
+                                      new Vector3(0, 2, 0));
+            Triangle t2 = new Triangle(new Vector3(3, 0, 0),
+                                      new Vector3(0, 0, 0),
+                                      new Vector3(0, 1, 0));
+            mSaved = new List<Triangle>();
+            mSaved.Add(t1);
+            mSaved.Add(t2);
+            TriangleCount = 2;
+            mTriMesh.VertexCount = TriangleCount * 3;
+            mTriMesh.GenerateMesh(mSaved);
+            mClipMesh.VertexCount = TriangleCount * 3;
         }
         else if (PlaneSweep)
         {
             PlaneSweep = false;
+            TriangleCount = mSaved.Count;
             StartCoroutine(PlaneSweepArea());
         }
     }
@@ -122,6 +140,7 @@ public class TriangleArea : MonoBehaviour
         mClipMesh.VertexCount = TriangleCount * 3;
         mTriMesh.Clear();
         mClipMesh.Clear();
+        mLinesToRender.Clear();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
@@ -129,8 +148,8 @@ public class TriangleArea : MonoBehaviour
         {
             t.VertexIndex = -1;
         }
+        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
         mVertexGroup.AddTriangles(mSaved);
-        mLinesToRender.Clear();
         mTriMesh.Display();
         mClipMesh.Display();
         yield return new WaitForEndOfFrame();

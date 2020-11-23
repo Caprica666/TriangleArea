@@ -11,7 +11,7 @@ public class Triangle
     public Edge[] Edges = new Edge[3];
     public Bounds BoundBox = new Bounds();
 
-    private static readonly float EPSILON = 1e-5f;
+    private static readonly float EPSILON = 2e-7f;
     public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = -1)
     {
         Init(v1, v2, v3, vindex);
@@ -81,17 +81,6 @@ public class Triangle
         BoundBox.Encapsulate(v3);
     }
 
-    public bool IsDegenerate()
-    {
-        if (((Vertices[0] - Vertices[1]).sqrMagnitude < EPSILON) ||
-            ((Vertices[1] - Vertices[2]).sqrMagnitude < EPSILON) ||
-            ((Vertices[0] - Vertices[2]).sqrMagnitude < EPSILON))
-        {
-            return true;
-        }
-        return false;
-    }
-
     public float GetArea()
     {
         float area = GetVertex(0).x * (GetVertex(1).y - GetVertex(2).z) +
@@ -140,10 +129,14 @@ public class Triangle
         float alpha = bc[0];
         float beta = bc[1];
         float gamma = bc[2];
-        bool alphais0 = Math.Abs(alpha) < 2e-7;
-        bool betais0 = Math.Abs(beta) < 2e-7;
-        bool gammais0 = Math.Abs(gamma) < 2e-7;
+        bool alphais0 = Math.Abs(alpha) < EPSILON;
+        bool betais0 = Math.Abs(beta) < EPSILON;
+        bool gammais0 = Math.Abs(gamma) < EPSILON;
 
+//        if (alphais0 || betais0 || gammais0)
+//        {
+//            return 0;
+//        }
         if ((alpha >= 0) && (gamma >= 0) && betais0)
         {
             return 0;
@@ -156,7 +149,7 @@ public class Triangle
         {
             return 0;
         }
-        return (alpha > 0) && (beta > 0) && (gamma > 0) ? 1 : -1;
+        return (alpha > EPSILON) && (beta > EPSILON) && (gamma > EPSILON) ? 1 : -1;
     }
 
     public bool Bary(Vector3 p, ref Vector3 bc)

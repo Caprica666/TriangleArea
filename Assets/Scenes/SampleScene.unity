@@ -332,6 +332,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   New: 0
   PlaneSweep: 0
+  Test: 0
   TriangleCount: 2
 --- !u!33 &904569348
 MeshFilter:

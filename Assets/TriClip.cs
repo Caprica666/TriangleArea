@@ -16,7 +16,7 @@ public class EdgeClip : IComparable<EdgeClip>
     public Vector3 IntersectionPoint;
     public Vector3 IsectBaryCoords;
     public const int INTERSECTING = 1;
-    public const int VERTEX = 2;
+    public const int EDGE = 2;
     public const int OUTSIDE = 4;
     public const int COINCIDENT = 8;
     public const float EPSILON = 2e-6f;
@@ -77,15 +77,15 @@ public class EdgeClip : IComparable<EdgeClip>
             (IsectBaryCoords[1] == 1) ||
             (IsectBaryCoords[2] == 1))
         {
-            return INTERSECTING | VERTEX;
+            return INTERSECTING | EDGE;
         }
         if ((d == f) || (e == f))
         {
-            return INTERSECTING | VERTEX;
+            return INTERSECTING | EDGE;
         }
         if ((d == 0) && (e == 0))
         {
-            return INTERSECTING | VERTEX;
+            return INTERSECTING | EDGE;
         }
         if (f > 0)
         {
@@ -141,21 +141,20 @@ public class TriClip
     public List<EdgeClip> EdgesClipped = new List<EdgeClip>();
     public Edge Clipper;
     public Edge Clipped;
-    public int NumIntersected;
-    public int[] Inside = new int[3];
+    private int mCoincident;
+    private int[] mInside = new int[3];
     public const float EPSILON = 2e-7f;
 
     public TriClip(Edge clipper, Edge clipped)
     {
         Clipper = clipper;
         Clipped = clipped;
-        NumIntersected = 0;
-        Inside[0] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(0));
-        Inside[1] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(1));
-        Inside[2] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(2));
+        mInside[0] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(0));
+        mInside[1] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(1));
+        mInside[2] = Clipper.Tri.Contains(Clipped.Tri.GetVertex(2));
     }
 
-    public ClipResult Clip(List<Triangle> clipped)
+    private bool IsInsideClipper()
     {
         const int V2_IN = 0x20;
         const int V2_EDGE = 0x10;
@@ -163,9 +162,9 @@ public class TriClip
         const int V1_EDGE = 4;
         const int V0_IN = 2;
         const int V0_EDGE = 1;
-        int mask = ((Inside[2] > 0) ? V2_IN : ((Inside[2] == 0) ? V2_EDGE : 0));
-        mask |= ((Inside[1] > 0) ? V1_IN : ((Inside[1] == 0) ? V1_EDGE : 0));
-        mask |= ((Inside[0] > 0) ? V0_IN : ((Inside[0] == 0) ? V0_EDGE : 0));
+        int mask = ((mInside[2] > 0) ? V2_IN : ((mInside[2] == 0) ? V2_EDGE : 0));
+        mask |= ((mInside[1] > 0) ? V1_IN : ((mInside[1] == 0) ? V1_EDGE : 0));
+        mask |= ((mInside[0] > 0) ? V0_IN : ((mInside[0] == 0) ? V0_EDGE : 0));
         switch (mask)
         {
             case V0_IN | V1_IN | V2_IN:         // all verts inside
@@ -177,67 +176,69 @@ public class TriClip
             case V1_IN | V2_IN | V0_EDGE:
 
             case V0_EDGE | V1_EDGE | V2_EDGE:
-            return ClipResult.INSIDE;           // Clipped inside Clipper
+            return true;                         // Clipped inside Clipper
         }
-        /*
-         * Clip against the Clipper triangle,
-         * check if the Clipper edge intersects
-         * two Clipped edges
-         */
-        EdgeClip[] edges = ClipAgainstEdge(Clipper);
-        Edge adjacent = Clipper.Tri.Edges[(Clipper.EdgeIndex + 2) % 3];
+        return false;
+    }
 
-        /*
-         * Check which edges of the Clipped triangle intersect the Clipper edge.
-         * If no intersection, clip against the adjacent Clipper edge.
-         */
-        if (edges == null)
+    public ClipResult ClipTri(List<Triangle> clipped)
+    {
+        if (IsInsideClipper())
         {
-            edges = ClipAgainstEdge(adjacent);
-            if (edges == null)
-            {
-                return ClipResult.OUTSIDE;
-            }
+            return ClipResult.INSIDE;
         }
-        else if ((edges[0].Status & EdgeClip.COINCIDENT) != 0)
+        List<EdgeClip> edgesclipped = new List<EdgeClip>();
+        EdgeClip edge1;
+        EdgeClip edge2;
+
+        mCoincident = -1;
+        int n = ClipAgainstEdge(Clipper, edgesclipped);
+
+        if (mCoincident == Clipped.EdgeIndex)
         {
-            return (Inside[(edges[0].ClippedEdgeEnd + 1) % 3] > 0) ?
-                    ClipResult.INSIDE : ClipResult.OUTSIDE;
-//            return Clipper.Tri.Contains(Clipped.Tri) ? ClipResult.INSIDE : ClipResult.OUTSIDE;
+            return ClipResult.COINCIDENT;
         }
-        /*
-         * If only one edge of the Clipped triangle intersects,
-         * clip against the adjacent Clipper edge.
-         * If the adjacent edge clips two edges, return those results.
-         * If both Clipper edges each intersect, combine these results.
-         */
-        else if ((edges[1] == null) ||
-                ((edges[1].Status & EdgeClip.INTERSECTING) == 0))
-        {
-            EdgeClip[] edges2 = ClipAgainstEdge(adjacent);
-            if ((edges2 != null) &&
-                ((edges2[0].Status & EdgeClip.INTERSECTING) != 0))
-            {
-                if ((edges2[1] != null) &&
-                    ((edges2[1].Status & EdgeClip.INTERSECTING) != 0))
-                {
-                    edges = edges2;
-                }
-                else
-                {
-                    edges[1] = edges2[0];
-                }
-            }
-        }
-        if (edges[1] == null)
+        if (n <= 0)
         {
             return ClipResult.OUTSIDE;
         }
-        if ((edges[0].Status & edges[1].Status) == EdgeClip.VERTEX)
+        edge1 = edgesclipped[0];
+        if (n == 2)
         {
-            return Clipper.Tri.Contains(Clipped.Tri) ? ClipResult.INSIDE : ClipResult.OUTSIDE;
+            edge2 = edgesclipped[1];
         }
-        ClipResult r = ClipTriangles(edges[0], edges[1], clipped);
+        else // n == 1
+        {
+            int adjedge1 = (Clipper.EdgeIndex + 1) % 3;
+            int adjedge2 = (Clipper.EdgeIndex + 2) % 3;
+            Edge adjacent;
+
+            if (Clipped.Tri.Contains(edge1.Clipper.Tri.Vertices[edge1.ClipperEdgeStart]) > 0)
+            {
+                adjacent = Clipper.Tri.Edges[adjedge2];
+            }
+            else if (Clipped.Tri.Contains(edge1.Clipper.Tri.Vertices[edge1.ClipperEdgeEnd]) > 0)
+            {
+                adjacent = Clipper.Tri.Edges[adjedge1];
+            }
+            else
+            {
+                return (mCoincident == Clipped.EdgeIndex) ? ClipResult.COINCIDENT : ClipResult.OUTSIDE;
+            }
+            mCoincident = -1;
+            edgesclipped.Clear();
+            n = ClipAgainstEdge(adjacent, edgesclipped);
+            if (n < 1)
+            {
+                return ClipResult.OUTSIDE;
+            }
+            edge2 = edgesclipped[0];
+        }
+        if (mCoincident == edge2.Clipped.EdgeIndex)
+        {
+            return ClipResult.COINCIDENT;
+        }
+        ClipResult r = ClipTriangles(edge1, edge2, clipped);
         switch (r)
         {
             case ClipResult.CLIPPED:
@@ -247,12 +248,51 @@ public class TriClip
         return ClipResult.OUTSIDE;
     }
 
-    public EdgeClip[] ClipAgainstEdge(Edge clipper)
+    public ClipResult ClipOneEdge(List<Triangle> clipped)
+    {
+        if (IsInsideClipper())
+        {
+            return ClipResult.INSIDE;
+        }
+        List<EdgeClip> edgesclipped = new List<EdgeClip>();
+        EdgeClip edge1;
+        EdgeClip edge2;
+
+        mCoincident = -1;
+        int n = ClipAgainstEdge(Clipper, edgesclipped);
+
+        if (mCoincident == Clipped.EdgeIndex)
+        {
+            return ClipResult.COINCIDENT;
+        }
+        if (n <= 0)
+        {
+            return ClipResult.OUTSIDE;
+        }
+        edge1 = edgesclipped[0];
+        if (n == 2)
+        {
+            edge2 = edgesclipped[1];
+        }
+        else
+        {            
+            return ClipResult.OUTSIDE;
+        }
+        ClipResult r = ClipTriangles(edge1, edge2, clipped);
+        switch (r)
+        {
+            case ClipResult.CLIPPED:
+            case ClipResult.INSIDE:
+            return r;
+        }
+        return ClipResult.OUTSIDE;
+    }
+
+    private int ClipAgainstEdge(Edge clipper, List<EdgeClip> clipedges)
     {
         int intersected = 0;
         int[] clipstatus = new int[3];
         EdgeClip[] alledges = new EdgeClip[3];
-        EdgeClip[] clipedges = new EdgeClip[2];
 
         for (int i = 0; i < 3; ++i)
         {
@@ -262,27 +302,25 @@ public class TriClip
             if (((clipstatus[i] & EdgeClip.INTERSECTING) != 0) &&
                 ((clipstatus[i] & EdgeClip.OUTSIDE) == 0))
             {
+                if ((clipstatus[i] & EdgeClip.EDGE) != 0)
+                {
+                    clipedges.Add(alledges[i]);
+                }
+                else
+                {
+                    clipedges.Insert(0, alledges[i]);
+                }
                 if (++intersected > 1)
                 {
-                    clipedges[1] = alledges[i];
-                    return clipedges;
+                    return intersected;
                 }
-                clipedges[0] = alledges[i];
             }
-        }
-        if (intersected > 0)
-        {
-            return clipedges;
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-            if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
+            else if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
             {
-                clipedges[0] = alledges[i];
-                return clipedges;
+                mCoincident = alledges[i].Clipper.EdgeIndex;
             }
         }
-        return null;
+        return intersected;
     }
 
 
