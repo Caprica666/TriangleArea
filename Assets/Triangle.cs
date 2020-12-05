@@ -196,4 +196,11 @@ public class Triangle
         }
         return false;
     }
+
+    public override string ToString()
+    {
+        return String.Format("T {0:##} {1:#.#}, {2:#.#}, {3:#.#}",
+                            (this.VertexIndex / 3),
+                            TriColor.r, TriColor.g, TriColor.b);
+    }
 }

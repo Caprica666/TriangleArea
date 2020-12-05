@@ -5,12 +5,12 @@ using UnityEngine;
 
 public class EdgeClip : IComparable<EdgeClip>
 {
-    public Edge EdgeA;
-    public Edge EdgeB;
-    public int EdgeAStart;
-    public int EdgeAEnd;
-    public int EdgeBStart;
-    public int EdgeBEnd;
+    public Edge Clipper;
+    public Edge Clipped;
+    public int ClipperStart;
+    public int ClipperEnd;
+    public int ClippedStart;
+    public int ClippedEnd;
     public int Status;
     public int HashKey;
     public Vector3 IntersectionPoint;
@@ -23,14 +23,14 @@ public class EdgeClip : IComparable<EdgeClip>
 
     public EdgeClip(Edge clipper, Edge clipped) 
     {
-        EdgeA = clipper;
-        EdgeB = clipped;
-        EdgeAStart = clipper.EdgeIndex;
-        EdgeBStart = clipped.EdgeIndex;
-        EdgeAEnd = (EdgeAStart + 1) % 3;
-        EdgeBEnd = (EdgeBStart + 1) % 3;
-        HashKey = (EdgeAStart << 6) | (EdgeAEnd << 4) |
-                  (EdgeBStart << 2) | EdgeBEnd;
+        Clipper = clipper;
+        Clipped = clipped;
+        ClipperStart = clipper.EdgeIndex;
+        ClippedStart = clipped.EdgeIndex;
+        ClipperEnd = (ClipperStart + 1) % 3;
+        ClippedEnd = (ClippedStart + 1) % 3;
+        HashKey = (ClipperStart << 6) | (ClipperEnd << 4) |
+                  (ClippedStart << 2) | ClippedEnd;
     }
 
     public int Clip()
@@ -49,29 +49,39 @@ public class EdgeClip : IComparable<EdgeClip>
     */
     private int FindIntersection()
     {
-        Vector3 p1 = EdgeB.Tri.GetVertex(EdgeBStart);
-        Vector3 p2 = EdgeB.Tri.GetVertex(EdgeBEnd);
-        Vector3 p3 = EdgeA.Tri.GetVertex(EdgeAStart);
-        Vector3 p4 = EdgeA.Tri.GetVertex(EdgeAEnd);
+        Vector3 p1 = Clipped.Tri.GetVertex(ClippedStart);
+        Vector3 p2 = Clipped.Tri.GetVertex(ClippedEnd);
+        Vector3 p3 = Clipper.Tri.GetVertex(ClipperStart);
+        Vector3 p4 = Clipper.Tri.GetVertex(ClipperEnd);
         Vector3 A = p2 - p1;
         Vector3 B = p3 - p4;
         Vector3 C = p1 - p3;
         float f = A.y * B.x - A.x * B.y;
         float e = A.x * C.y - A.y * C.x;
         float d = B.y * C.x - B.x * C.y;
+        Vector3 min1 = new Vector3(Math.Min(p1.x, p2.x), Math.Min(p1.y, p2.y));
+        Vector3 max1 = new Vector3(Math.Max(p1.x, p2.x), Math.Max(p1.y, p2.y));
+        Vector3 min2 = new Vector3(Math.Min(p3.x, p4.x), Math.Min(p3.y, p4.y));
+        Vector3 max2 = new Vector3(Math.Max(p3.x, p4.x), Math.Max(p3.y, p4.y));
 
         // check to see if they are coincident
         if (Math.Abs(f) < EPSILON)
         {
-            if (Math.Abs(d) < EPSILON)
+            if (min1.x >= min2.x)
             {
-                return COINCIDENT;
+                IntersectionPoint = p1;
+                return INTERSECTING | COINCIDENT;
             }
-            return 0;
+            else if (max1.x <= max2.x)
+            {
+                IntersectionPoint = p2;
+                return INTERSECTING | COINCIDENT;
+            }
+            return COINCIDENT;
         }
         float t = d / f;
-        IntersectionPoint = EdgeB.Tri.GetVertex(EdgeBStart) + (t * A);
-        EdgeB.Tri.Bary(IntersectionPoint, ref IsectBaryCoords);
+        IntersectionPoint = Clipped.Tri.GetVertex(ClippedStart) + (t * A);
+        Clipped.Tri.Bary(IntersectionPoint, ref IsectBaryCoords);
 
         if ((IsectBaryCoords[0] == 1) ||
             (IsectBaryCoords[1] == 1) ||
@@ -109,12 +119,6 @@ public class EdgeClip : IComparable<EdgeClip>
                 return INTERSECTING | OUTSIDE;
             }
         }
-
-        Vector3 min1 = new Vector3(Math.Min(p1.x, p2.x), Math.Min(p1.y, p2.y));
-        Vector3 max1 = new Vector3(Math.Max(p1.x, p2.x), Math.Max(p1.y, p2.y));
-        Vector3 min2 = new Vector3(Math.Min(p3.x, p4.x), Math.Min(p3.y, p4.y));
-        Vector3 max2 = new Vector3(Math.Max(p3.x, p4.x), Math.Max(p3.y, p4.y));
-
         if ((IntersectionPoint.x < min1.x) || (IntersectionPoint.x > max1.x))
         {
             return INTERSECTING | OUTSIDE;
@@ -143,15 +147,11 @@ public enum ClipResult
 public class TriClip
 {
     public List<EdgeClip> EdgesClipped = new List<EdgeClip>();
-    public Edge mEdgeA;
-    public Edge mEdgeB;
     private int mCoincident;
     public const float EPSILON = 2e-7f;
 
-    public TriClip(Edge edgeA, Edge edgeB)
+    public TriClip()
     {
-        mEdgeA = edgeA;
-        mEdgeB = edgeB;
     }
 
     private bool TriAContainsTriB(Edge edgeA, Edge edgeB)
@@ -187,9 +187,9 @@ public class TriClip
         return false;
     }
 
-    public ClipResult ClipTri(List<Triangle> clipped)
+    public ClipResult ClipTri(Edge edgeA, Edge edgeB, List<Triangle> clipped)
     {
-        if (TriAContainsTriB(mEdgeA, mEdgeB))
+        if (TriAContainsTriB(edgeA, edgeB))
         {
             return ClipResult.BINSIDEA;
         }
@@ -198,13 +198,8 @@ public class TriClip
         int n, m;
 
         mCoincident = -1;
-        n = ClipAgainstEdge(mEdgeA, mEdgeB, bclipped);
-
-        if (mCoincident == mEdgeA.EdgeIndex)
-        {
-            return ClipResult.COINCIDENT;
-        }
-        m = ClipAgainstEdge(mEdgeB, mEdgeA, aclipped);
+        n = ClipAgainstEdge(edgeA, edgeB, bclipped);
+        m = ClipAgainstEdge(edgeB, edgeA, aclipped);
         if ((n == 2) &&
             ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0))
         {
@@ -212,7 +207,7 @@ public class TriClip
                 ((bclipped[1].Status & EdgeClip.OUTSIDE) == 0) ||
                 ((aclipped[0].Status & EdgeClip.OUTSIDE) != 0))
             {
-                ClipResult r = ClipTriangles(mEdgeA.Tri, mEdgeB.Tri, bclipped[0], bclipped[1], clipped);
+                ClipResult r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
                 switch (r)
                 {
                     case ClipResult.CLIPPED: return ClipResult.ACLIPSB;
@@ -223,7 +218,7 @@ public class TriClip
         else if ((m == 2) &&
                 ((aclipped[0].Status & EdgeClip.OUTSIDE) == 0))
         {
-             ClipResult r = ClipTriangles(mEdgeB.Tri, mEdgeA.Tri, aclipped[0], aclipped[1], clipped);
+             ClipResult r = ClipTriangles(edgeB.Tri, edgeA.Tri, aclipped[0], aclipped[1], clipped);
              switch (r)
              {
                  case ClipResult.CLIPPED: return ClipResult.BCLIPSA;
@@ -261,7 +256,7 @@ public class TriClip
             }
             else if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
             {
-                mCoincident = alledges[i].EdgeA.EdgeIndex;
+                mCoincident = alledges[i].Clipper.EdgeIndex;
             }
         }
         return intersected;
@@ -287,17 +282,17 @@ public class TriClip
         Vector3 vc;
         Vector3 isect1 = edge1.IntersectionPoint;
         Vector3 isect2 = edge2.IntersectionPoint;
-        if (edge1.EdgeBEnd == edge2.EdgeBStart)
+        if (edge1.ClippedEnd == edge2.ClippedStart)
         {
-            va = triB.GetVertex(edge1.EdgeBEnd);
-            vb = triB.GetVertex(edge1.EdgeBStart);
-            vc = triB.GetVertex(edge2.EdgeBEnd);
+            va = triB.GetVertex(edge1.ClippedEnd);
+            vb = triB.GetVertex(edge1.ClippedStart);
+            vc = triB.GetVertex(edge2.ClippedEnd);
         }
-        else // edge1.ClippedEdgeStart != edge2.ClippedEdgeEnd
+        else // edge1.EdgeBStart != edge2.EdgeBEnd
         {
-            va = triB.GetVertex(edge1.EdgeBStart);
-            vb = triB.GetVertex(edge1.EdgeBEnd);
-            vc = triB.GetVertex(edge2.EdgeBStart);
+            va = triB.GetVertex(edge1.ClippedStart);
+            vb = triB.GetVertex(edge1.ClippedEnd);
+            vc = triB.GetVertex(edge2.ClippedStart);
         }
         temp1 = isect1 - isect2;
         if (temp1.sqrMagnitude <= EPSILON)
@@ -367,7 +362,7 @@ public class TriClip
             return ClipResult.CLIPPED;
 
             case ISECTA | ISECTB:
-            return (mEdgeA.Tri.Contains(vc) > 0) ? 
+            return (triA.Contains(vc) > 0) ? 
                     ClipResult.INSIDE : ClipResult.COINCIDENT;
 
             case ISECTA | ISECTC:

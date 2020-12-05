@@ -86,10 +86,7 @@ public class LineSegment
         // check to see if they are coincident
         if (Math.Abs(f) < EPSILON)
         {
-            if (Math.Abs(d) < EPSILON)
-            {
-                return -1;
-            }
+            
             return -1;
         }
         float t = d / f;

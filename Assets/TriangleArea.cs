@@ -65,7 +65,6 @@ public class TriangleArea : MonoBehaviour
             Triangle t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
                                       new Vector3(0.2f, -0.1f, 0),
                                       new Vector3(1.5f, 2, 0));
-            */
 
             Triangle t1 = new Triangle(new Vector3(-2.8f, -2.8f, 0),
                                         new Vector3(-0.7f, 0.3f, 0),
@@ -73,10 +72,29 @@ public class TriangleArea : MonoBehaviour
             Triangle t2 = new Triangle(new Vector3(-0.8f, -1.4f, 0),
                                       new Vector3(2.5f, -0.8f, 0),
                                       new Vector3(2.6f, 1.2f, 0));
+
+            Triangle t1 = new Triangle(new Vector3(-0.7f, 0.4f, 0),
+                                        new Vector3(2.2f, -1.2f, 0),
+                                        new Vector3(2.5f, 2.9f, 0));
+            Triangle t2 = new Triangle(new Vector3(-1.7f, 2.1f, 0),
+                                      new Vector3(1.1f, -1.9f, 0),
+                                      new Vector3(1.4f, 0.2f, 0));
+            */
+
+            Triangle t1 = new Triangle(new Vector3(0.7f, -0.7f, 0),
+                                        new Vector3(2.3f, 2.9f, 0),
+                                        new Vector3(2.5f, 0.3f, 0));
+            Triangle t2 = new Triangle(new Vector3(-2.0f, -2.6f, 0),
+                                      new Vector3(-0.8f, 1.7f, 0),
+                                      new Vector3(0.9f, -2.4f, 0));
+            Triangle t3 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
+                                        new Vector3(-1.0f, 2.3f, 0),
+                                        new Vector3(2.9f, 02.4f, 0));
             mSaved = new List<Triangle>();
             mSaved.Add(t1);
             mSaved.Add(t2);
-            TriangleCount = 2;
+            mSaved.Add(t3);
+            TriangleCount = 3;
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;
