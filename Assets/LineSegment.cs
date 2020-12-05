@@ -1,6 +1,7 @@
 ﻿using System;
-using Boo.Lang;
+using System.Collections.Generic;
 using UnityEngine;
+
 
 public class LineSegment
 {
@@ -53,6 +54,20 @@ public class LineSegment
         float slope = delta.y / delta.x;
 
         return slope * (x - Start.x) + Start.y;
+    }
+
+
+    public bool IsCoincident(LineSegment line2)
+    {
+        Vector3 p1 = line2.Start;
+        Vector3 p2 = line2.End;
+        Vector3 p3 = Start;
+        Vector3 p4 = End;
+        Vector3 A = p2 - p1;
+        Vector3 B = p3 - p4;
+        float f = A.y * B.x - A.x * B.y;
+
+        return (Math.Abs(f) < EPSILON);
     }
 
     public int FindIntersection(LineSegment line2, ref Vector3 intersection)
@@ -128,3 +143,4 @@ public class LineSegment
         return Start + " -> " + End;
     }
 }
+

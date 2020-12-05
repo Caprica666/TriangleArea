@@ -40,6 +40,11 @@ public class Edge
         mLine = src.Line;
     }
 
+    public bool IsCoincident(Edge e2)
+    {
+        return Line.IsCoincident(e2.Line);
+    }
+
     public int FindIntersection(Edge e2, ref Vector3 intersection)
     {
         LineSegment line2 = e2.Line;
@@ -76,12 +81,6 @@ public class EdgeCompare : Comparer<Edge>
     {
         LineSegment s1 = e1.Line;
         LineSegment s2 = e2.Line;
-
-        if ((e1.Tri == e2.Tri) && (e1.EdgeIndex == e2.EdgeIndex))
-        {
-            return 0;
-        }
-
         float y1 = s1.CalcY(CurrentX);
         float y2 = s2.CalcY(CurrentX);
         float t = y1 - y2;
@@ -90,7 +89,27 @@ public class EdgeCompare : Comparer<Edge>
         {
             return (t > 0) ? 1 : -1;
         }
-        return e1.EdgeIndex - e2.EdgeIndex;
+        Vector3 v1 = s1.End;
+        Vector3 v2 = s2.End;
+        Vector3 sweep = new Vector3(0, -1, 0);
+        float a1, a2;
+
+        if (Vector3.Equals(v1, v2))
+        {
+            return 0;
+        }
+        v1 -= s1.Start;
+        v2 -= s2.Start;
+        v1.Normalize();
+        v2.Normalize();
+        a1 = Vector3.Dot(sweep, v1);
+        a2 = Vector3.Dot(sweep, v2);
+        t = a2 - a1;
+        if (Math.Abs(t) > LineSegment.EPSILON)
+        {
+            return (t > 0) ? 1 : -1;
+        }
+        return 0;
     }
 }
 

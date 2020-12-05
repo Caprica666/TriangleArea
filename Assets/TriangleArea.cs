@@ -50,12 +50,29 @@ public class TriangleArea : MonoBehaviour
         else if (Test)
         {
             Test = false;
-            Triangle t1 = new Triangle(new Vector3(-4, 0, 0),
-                                      new Vector3(0, -1, 0),
-                                      new Vector3(0, 2, 0));
-            Triangle t2 = new Triangle(new Vector3(3, 0, 0),
-                                      new Vector3(0, 0, 0),
-                                      new Vector3(0, 1, 0));
+            /*
+            Triangle t1 = new Triangle(new Vector3(-3, -2.5f, 0),
+                                      new Vector3(-1.1f, 2, 0),
+                                      new Vector3(1.5f, -3, 0));
+            Triangle t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
+                                      new Vector3(0.2f, -0.1f, 0),
+                                      new Vector3(1.5f, 2, 0));
+
+
+            Triangle t1 = new Triangle(new Vector3(-3, -2.5f, 0),
+                                      new Vector3(-1.1f, 2, 0),
+                                      new Vector3(1.6f, -3, 0));
+            Triangle t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
+                                      new Vector3(0.2f, -0.1f, 0),
+                                      new Vector3(1.5f, 2, 0));
+            */
+
+            Triangle t1 = new Triangle(new Vector3(-2.8f, -2.8f, 0),
+                                        new Vector3(-0.7f, 0.3f, 0),
+                                        new Vector3(1.1f, -1.2f, 0));
+            Triangle t2 = new Triangle(new Vector3(-0.8f, -1.4f, 0),
+                                      new Vector3(2.5f, -0.8f, 0),
+                                      new Vector3(2.6f, 1.2f, 0));
             mSaved = new List<Triangle>();
             mSaved.Add(t1);
             mSaved.Add(t2);
