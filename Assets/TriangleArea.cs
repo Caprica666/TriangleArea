@@ -6,7 +6,8 @@ public class TriangleArea : MonoBehaviour
 {
     public bool New;
     public bool PlaneSweep;
-    public bool Test;
+    public int Test = 0;
+    public int Method = 1;
     public int TriangleCount = 2;
 
     private float mMaxDist = 5;
@@ -47,54 +48,69 @@ public class TriangleArea : MonoBehaviour
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;
         }
-        else if (Test)
+        else if (Test > 0)
         {
-            Test = false;
-            /*
-            Triangle t1 = new Triangle(new Vector3(-3, -2.5f, 0),
-                                      new Vector3(-1.1f, 2, 0),
-                                      new Vector3(1.5f, -3, 0));
-            Triangle t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
-                                      new Vector3(0.2f, -0.1f, 0),
-                                      new Vector3(1.5f, 2, 0));
-
-
-            Triangle t1 = new Triangle(new Vector3(-3, -2.5f, 0),
-                                      new Vector3(-1.1f, 2, 0),
-                                      new Vector3(1.6f, -3, 0));
-            Triangle t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
-                                      new Vector3(0.2f, -0.1f, 0),
-                                      new Vector3(1.5f, 2, 0));
-
-            Triangle t1 = new Triangle(new Vector3(-2.8f, -2.8f, 0),
-                                        new Vector3(-0.7f, 0.3f, 0),
-                                        new Vector3(1.1f, -1.2f, 0));
-            Triangle t2 = new Triangle(new Vector3(-0.8f, -1.4f, 0),
-                                      new Vector3(2.5f, -0.8f, 0),
-                                      new Vector3(2.6f, 1.2f, 0));
-
-            Triangle t1 = new Triangle(new Vector3(-0.7f, 0.4f, 0),
-                                        new Vector3(2.2f, -1.2f, 0),
-                                        new Vector3(2.5f, 2.9f, 0));
-            Triangle t2 = new Triangle(new Vector3(-1.7f, 2.1f, 0),
-                                      new Vector3(1.1f, -1.9f, 0),
-                                      new Vector3(1.4f, 0.2f, 0));
-            */
-
-            Triangle t1 = new Triangle(new Vector3(0.7f, -0.7f, 0),
-                                        new Vector3(2.3f, 2.9f, 0),
-                                        new Vector3(2.5f, 0.3f, 0));
-            Triangle t2 = new Triangle(new Vector3(-2.0f, -2.6f, 0),
-                                      new Vector3(-0.8f, 1.7f, 0),
-                                      new Vector3(0.9f, -2.4f, 0));
-            Triangle t3 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
-                                        new Vector3(-1.0f, 2.3f, 0),
-                                        new Vector3(2.9f, 02.4f, 0));
+            int test = Test;
+            Triangle t1;
+            Triangle t2;
+            Triangle t3;
             mSaved = new List<Triangle>();
+
+            Test = 0;
+            switch (test)
+            {
+                default:
+                t1 = new Triangle(new Vector3(-3, -2.5f, 0),
+                                  new Vector3(-1.1f, 2, 0),
+                                  new Vector3(1.5f, -3, 0));
+                t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
+                                  new Vector3(0.2f, -0.1f, 0),
+                                  new Vector3(1.5f, 2, 0));
+                break;
+
+                case 5:
+                t1 = new Triangle(new Vector3(-3, -2.5f, 0),
+                                  new Vector3(-1.1f, 2, 0),
+                                  new Vector3(1.6f, -3, 0));
+                t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
+                                  new Vector3(0.2f, -0.1f, 0),
+                                  new Vector3(1.5f, 2, 0));
+                break;
+
+                case 4:
+                t1 = new Triangle(new Vector3(-2.8f, -2.8f, 0),
+                                  new Vector3(-0.7f, 0.3f, 0),
+                                  new Vector3(1.1f, -1.2f, 0));
+                t2 = new Triangle(new Vector3(-0.8f, -1.4f, 0),
+                                  new Vector3(2.5f, -0.8f, 0),
+                                  new Vector3(2.6f, 1.2f, 0));
+                break;
+
+                case 3:
+                t1 = new Triangle(new Vector3(-0.7f, 0.4f, 0),
+                                  new Vector3(2.2f, -1.2f, 0),
+                                  new Vector3(2.5f, 2.9f, 0));
+                t2 = new Triangle(new Vector3(-1.7f, 2.1f, 0),
+                                  new Vector3(1.1f, -1.9f, 0),
+                                  new Vector3(1.4f, 0.2f, 0));
+                break;
+
+                case 2:
+                t1 = new Triangle(new Vector3(0.7f, -0.7f, 0),
+                                  new Vector3(2.3f, 2.9f, 0),
+                                  new Vector3(2.5f, 0.3f, 0));
+                t2 = new Triangle(new Vector3(-2.0f, -2.6f, 0),
+                                  new Vector3(-0.8f, 1.7f, 0),
+                                  new Vector3(0.9f, -2.4f, 0));
+                t3 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
+                                  new Vector3(-1.0f, 2.3f, 0),
+                                  new Vector3(2.9f, 02.4f, 0));
+                mSaved.Add(t3);
+                break;
+            }
             mSaved.Add(t1);
             mSaved.Add(t2);
-            mSaved.Add(t3);
-            TriangleCount = 3;
+            TriangleCount = mSaved.Count;
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;

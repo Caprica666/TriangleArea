@@ -7,6 +7,7 @@ using Random = UnityEngine.Random;
 
 public class VertexGroup
 {
+    public int Method = 0;
     private RBTree<VertexEvent> mEventQ;
     private RBTree<Edge> mActiveLines;
     private List<Vector3> mIntersections;
@@ -96,7 +97,7 @@ public class VertexGroup
             mActiveLines.Add(t.Edges[i]);
         }
         if (mLineMesh != null)
-        {           
+        {
             p1.Line.VertexIndex = mLineMesh.Add(p1.Line, c);
         }
     }
@@ -221,7 +222,26 @@ public class VertexGroup
     {
         TriClip clipper = new TriClip();
         List<Triangle> trisClipped = new List<Triangle>();
-        ClipResult r = clipper.ClipTri(edgeA, edgeB, trisClipped);
+        ClipResult r;
+
+        switch (Method)
+        {
+            case 1:
+            r = clipper.ClipTri1(edgeA, edgeB, trisClipped);
+            break;
+
+            case 2:
+            r = clipper.ClipTri2(edgeA, edgeB, trisClipped);
+            break;
+
+            case 3:
+            r = clipper.ClipTri3(edgeA, edgeB, trisClipped);
+            break;
+
+            default:
+            r = clipper.ClipTri4(edgeA, edgeB, trisClipped);
+            break;
+        }
         switch (r)
         {
             case ClipResult.ACLIPSB:    // triB  was clipped
@@ -241,7 +261,7 @@ public class VertexGroup
             break;
 
             case ClipResult.AINSIDEB:     // tri A inside B
-            RemoveTri(edgeB.Tri, true);
+            RemoveTri(edgeA.Tri, true);
             break;
         }
         return r;
@@ -309,6 +329,7 @@ public class VertexGroup
             Edge topNeighbor;
             Edge edge;
             ClipResult r;
+            Triangle t1;
 
             if (collected == null)
             {
@@ -321,20 +342,49 @@ public class VertexGroup
             edge = collected[0].TriEdge;
             for (int i = 0; i < collected.Count; ++i)
             {
-                VertexEvent e = collected[i];
-                Triangle t = e.TriEdge.Tri;
+                VertexEvent e1 = collected[i];
+                t1 = e1.TriEdge.Tri;
 
-                if (point == t.GetVertex(2))
+                if (i < (collected.Count - 1))
                 {
-                    if (RemoveTri(t, true))
+                    VertexEvent e2 = collected[i + 1];
+
+                    if (t1 != e2.TriEdge.Tri)
                     {
-                        mClipMesh.AddTriangle(new Triangle(t));
+                        r = CheckForIntersection(e1.TriEdge, e2.TriEdge, true);
+                        switch (r)
+                        {
+                            case ClipResult.BINSIDEA:
+                            collected.RemoveAt(i + 1);
+                            mEventQ.Remove(e2);
+                            i--;
+                            continue;
+
+                            case ClipResult.AINSIDEB:
+                            collected.RemoveAt(i--);
+                            mEventQ.Remove(e1);
+                            continue;
+
+                            case ClipResult.OUTSIDE:
+                            break;
+
+                            default:
+                            return true;
+                        }
+                    }
+                }
+                mEventQ.Remove(e1);
+                if (point == t1.GetVertex(2))
+                {
+                    if (RemoveTri(t1, true))
+                    {
+                        mClipMesh.AddTriangle(new Triangle(t1));
                     }
                     collected.RemoveAt(i--);
                 }
                 else
                 {
-                    RemoveActive(e.TriEdge);
+                    RemoveActive(e1.TriEdge);
                 }
             }
             if (collected.Count == 0)
@@ -343,7 +393,8 @@ public class VertexGroup
                 topNeighbor = lineiter.FindTopNeighbor(edge);
 
                 if ((bottomNeighbor != null) &&
-                    (topNeighbor != null))
+                    (topNeighbor != null) &&
+                    (bottomNeighbor.Tri != topNeighbor.Tri))
                 {
                     CheckForIntersection(bottomNeighbor, topNeighbor);
                 }
@@ -380,22 +431,7 @@ public class VertexGroup
             /*
              * Check for intersections between collected triangles
              */
-            for (int i = 0; i < (collected.Count - 1); ++i)
-            {
-                VertexEvent e1 = collected[i];
-                VertexEvent e2 = collected[i + 1];
-
-                if (e1.TriEdge.Tri != e2.TriEdge.Tri)
-                {
-                    r = CheckForIntersection(e1.TriEdge, e2.TriEdge, true);
-                    if (r > 0)
-                    {
-                        return true;
-                    }
-                }
-                mEventQ.Remove(e1);
-            }
-            /*
+           /*
              * Check for intersection with the top neighbor
              */
             if (topNeighbor != null)
