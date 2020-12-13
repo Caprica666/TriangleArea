@@ -40,7 +40,6 @@ public class LineSegment
     protected Vector3 mStart;
     protected Vector3 mEnd;
     public int VertexIndex = -1;
-    public List<VertexEvent> Users = new List<VertexEvent>();
 
     public void Set(Vector3 start, Vector3 end)
     {

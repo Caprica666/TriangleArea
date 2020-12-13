@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.ExceptionServices;
 using UnityEngine;
 
-public class EdgeClip : IComparable<EdgeClip>
+public class EdgeClip
 {
     public Edge Clipper;
     public Edge Clipped;
@@ -12,7 +12,6 @@ public class EdgeClip : IComparable<EdgeClip>
     public int ClippedStart;
     public int ClippedEnd;
     public int Status;
-    public int HashKey;
     public Vector3 IntersectionPoint;
     public Vector3 IsectBaryCoords;
     public const int INTERSECTING = 1;
@@ -29,14 +28,11 @@ public class EdgeClip : IComparable<EdgeClip>
         ClippedStart = clipped.EdgeIndex;
         ClipperEnd = (ClipperStart + 1) % 3;
         ClippedEnd = (ClippedStart + 1) % 3;
-        HashKey = (ClipperStart << 6) | (ClipperEnd << 4) |
-                  (ClippedStart << 2) | ClippedEnd;
     }
 
     public int Clip()
     {
         Status = FindIntersection();
-        HashKey |= (Status << 8);
         return Status;
     }
 
@@ -67,16 +63,6 @@ public class EdgeClip : IComparable<EdgeClip>
         // check to see if they are coincident
         if (Math.Abs(f) < EPSILON)
         {
-            if (min1.x >= min2.x)
-            {
-                IntersectionPoint = p1;
-                return INTERSECTING | COINCIDENT;
-            }
-            else if (max1.x <= max2.x)
-            {
-                IntersectionPoint = p2;
-                return INTERSECTING | COINCIDENT;
-            }
             return COINCIDENT;
         }
         float t = d / f;
@@ -125,11 +111,6 @@ public class EdgeClip : IComparable<EdgeClip>
         }
         return INTERSECTING;
     }
-
-    public int CompareTo(EdgeClip other)
-    {
-        return HashKey - other.HashKey;
-    }
 }
 
 public enum ClipResult
@@ -147,7 +128,7 @@ public enum ClipResult
 public class TriClip
 {
     public List<EdgeClip> EdgesClipped = new List<EdgeClip>();
-    private int mCoincident;
+    private EdgeClip mCoincident = null;
     public const float EPSILON = 2e-7f;
 
     public TriClip()
@@ -187,35 +168,44 @@ public class TriClip
         return false;
     }
 
-    public ClipResult ClipTri3(Edge edgeA, Edge edgeB, List<Triangle> clipped)
+    public ClipResult ClipTri(Edge edgeA, Edge edgeB, List<Triangle> clipped)
     {
         if (TriAContainsTriB(edgeA, edgeB))
         {
             return ClipResult.BINSIDEA;
         }
-        if (TriAContainsTriB(edgeB, edgeA))
-        {
-            return ClipResult.BINSIDEA;
-        }
         List<EdgeClip> bclipped = new List<EdgeClip>();
-        ClipResult r;
+        ClipResult r = ClipResult.OUTSIDE;
+        Edge clipagainst = edgeA;
         int n;
 
-        mCoincident = -1;
-        n = ClipAgainstEdge(edgeA, edgeB, bclipped);
-        if ((n == 2) && 
-           (mCoincident < 0) &&
-           ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0))
+        mCoincident = null;
+        n = ClipAgainstEdge(clipagainst, edgeB, bclipped);
+        if ((n == 0) && (mCoincident == null))
+        {
+            return ClipResult.OUTSIDE;
+        }
+        if ((n < 2) ||
+            ((mCoincident != null) &&
+             (mCoincident.Clipper == edgeB)))
+        {
+            clipagainst = edgeA.Tri.Edges[(edgeA.EdgeIndex + 2) % 3];
+            bclipped.Clear();
+            n = ClipAgainstEdge(clipagainst, edgeB, bclipped);
+        }
+        if ((n >= 2) &&
+            ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0))
         {
             r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
-            switch (r)
-            {
-                case ClipResult.CLIPPED:
-                return ClipResult.ACLIPSB;
+        }
 
-                case ClipResult.INSIDE:
-                return ClipResult.BINSIDEA;
-            }
+        switch (r)
+        {
+            case ClipResult.CLIPPED:
+            return ClipResult.ACLIPSB;
+
+            case ClipResult.INSIDE:
+            return ClipResult.BINSIDEA;
         }
         return ClipResult.OUTSIDE;
     }
@@ -235,13 +225,13 @@ public class TriClip
         ClipResult r = ClipResult.OUTSIDE;
         int n, m;
 
-        mCoincident = -1;
+        mCoincident = null;
         n = ClipAgainstEdge(edgeA, edgeB, bclipped);
-        if ((n < 2) && (mCoincident < 0))
+        if ((n < 2) && (mCoincident == null))
         {
             return r;
         }
-        if (mCoincident < 0)
+        if (mCoincident == null)
         {
             if ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0)
             {
@@ -284,131 +274,20 @@ public class TriClip
                 return ClipResult.OUTSIDE;
             }
         }
+        if (n < 2)
+        {
+            return ClipResult.OUTSIDE;
+        }
         r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
         switch (r)
         {
             case ClipResult.CLIPPED:
-            return ClipResult.BCLIPSA;
+            return ClipResult.ACLIPSB;
 
             case ClipResult.INSIDE:
-            return ClipResult.AINSIDEB;
-        }
-
-        return ClipResult.OUTSIDE;
-    }
-
-    public ClipResult ClipTri2(Edge edgeA, Edge edgeB, List<Triangle> clipped)
-    {
-        if (TriAContainsTriB(edgeA, edgeB))
-        {
             return ClipResult.BINSIDEA;
         }
-        if (TriAContainsTriB(edgeB, edgeA))
-        {
-            return ClipResult.AINSIDEB;
-        }
-        List<EdgeClip> bclipped = new List<EdgeClip>();
-        List<EdgeClip> aclipped = new List<EdgeClip>();
-        int n, m;
 
-        mCoincident = -1;
-        n = ClipAgainstEdge(edgeA, edgeB, bclipped);
-        if ((n < 2) && (mCoincident < 0))
-        {
-            return ClipResult.OUTSIDE;
-        }
-        if (mCoincident < 0)
-        {
-            if ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0)
-            {
-                if ((bclipped[1].Status & EdgeClip.OUTSIDE) == 0)
-                {
-                    ClipResult r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
-                    switch (r)
-                    {
-                        case ClipResult.CLIPPED:
-                        return ClipResult.ACLIPSB;
-
-                        case ClipResult.INSIDE:
-                        return ClipResult.BINSIDEA;
-
-                        default:
-                        return ClipResult.OUTSIDE;
-                    }
-                }
-            }
-            else
-            {
-                return ClipResult.OUTSIDE;
-            }
-        }
-
-        m = ClipAgainstEdge(edgeB, edgeA, aclipped);
-        if ((m == 2) &&
-            ((aclipped[0].Status & aclipped[1].Status & EdgeClip.OUTSIDE) == 0))
-        {
-            ClipResult r = ClipTriangles(edgeB.Tri, edgeA.Tri, aclipped[0], aclipped[1], clipped);
-            switch (r)
-            {
-                case ClipResult.CLIPPED:
-                return ClipResult.BCLIPSA;
-
-                case ClipResult.INSIDE:
-                return ClipResult.AINSIDEB;
-
-                default:
-                return ClipResult.OUTSIDE;
-            }
-        }
-        return ClipResult.OUTSIDE;
-    }
-
-    public ClipResult ClipTri1(Edge edgeA, Edge edgeB, List<Triangle> clipped)
-    {
-        if (TriAContainsTriB(edgeA, edgeB))
-        {
-            return ClipResult.BINSIDEA;
-        }
-        if (TriAContainsTriB(edgeB, edgeA))
-        {
-            return ClipResult.AINSIDEB;
-        }
-        List<EdgeClip> bclipped = new List<EdgeClip>();
-        List<EdgeClip> aclipped = new List<EdgeClip>();
-        int n, m;
-
-        mCoincident = -1;
-        n = ClipAgainstEdge(edgeA, edgeB, bclipped);
-        m = ClipAgainstEdge(edgeB, edgeA, aclipped);
-        if ((n == 2) &&
-            ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0))
-        {
-            if ((m != 2) ||
-                ((bclipped[1].Status & EdgeClip.OUTSIDE) == 0) ||
-                ((aclipped[0].Status & EdgeClip.OUTSIDE) != 0))
-            {
-                ClipResult r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
-                switch (r)
-                {
-                    case ClipResult.CLIPPED:
-                    return ClipResult.ACLIPSB;
-                    case ClipResult.INSIDE:
-                    return ClipResult.BINSIDEA;
-                }
-            }
-        }
-        else if ((m == 2) &&
-                ((aclipped[0].Status & EdgeClip.OUTSIDE) == 0))
-        {
-            ClipResult r = ClipTriangles(edgeB.Tri, edgeA.Tri, aclipped[0], aclipped[1], clipped);
-            switch (r)
-            {
-                case ClipResult.CLIPPED:
-                return ClipResult.BCLIPSA;
-                case ClipResult.INSIDE:
-                return ClipResult.AINSIDEB;
-            }
-        }
         return ClipResult.OUTSIDE;
     }
 
@@ -433,14 +312,11 @@ public class TriClip
                 {
                     clipedges.Add(alledges[i]);
                 }
-                if (++intersected > 1)
-                {
-                    return intersected;
-                }
+                ++intersected;
             }
             else if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
             {
-                mCoincident = alledges[i].Clipper.EdgeIndex;
+                mCoincident = alledges[i];
             }
         }
         return intersected;

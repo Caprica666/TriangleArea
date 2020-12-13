@@ -71,14 +71,8 @@ public class EventCompare : IComparer<VertexEvent>
         {
             return order;
         }
-        EdgeCompare lcompare = new EdgeCompare();
-        lcompare.CurrentX = p1.Point.x + LineSegment.EPSILON;
+        EdgeCompare lcompare = new EdgeCompare(p1.Point.x + 4 * LineSegment.EPSILON);
         order = lcompare.Compare(p1.TriEdge, p2.TriEdge);
-        if (order != 0)
-        {
-            return order;
-        }
-        order = p1.TriEdge.Tri.GetHashCode() - p2.TriEdge.Tri.GetHashCode();
         return order;
-    }
+     }
 }

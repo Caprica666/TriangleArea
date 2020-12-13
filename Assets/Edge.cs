@@ -67,15 +67,19 @@ public class Edge
 
     public override string ToString()
     {
-        return " T: " + (Tri.VertexIndex / 3) + " E: " + EdgeIndex + " " + Line.ToString();
+        return String.Format("T: {0:0} E: {1:0} ",
+                             (Tri.VertexIndex / 3), EdgeIndex) +
+               Line.ToString();
     }
 }
 
 public class EdgeCompare : Comparer<Edge>
 {
-    public float CurrentX = float.MaxValue;
+    public float CurrentX = -100000;
 
     public EdgeCompare() { }
+
+    public EdgeCompare(float X) { CurrentX = X; }
 
     public override int Compare(Edge e1, Edge e2)
     {
@@ -85,21 +89,24 @@ public class EdgeCompare : Comparer<Edge>
         float y2 = s2.CalcY(CurrentX);
         float t = y1 - y2;
 
+        if (e1 == e2)
+        {
+            return 0;
+        }
         if (Math.Abs(t) > LineSegment.EPSILON)
         {
             return (t > 0) ? 1 : -1;
         }
-        Vector3 v1 = s1.End;
-        Vector3 v2 = s2.End;
+        t = s1.Start.x - s2.Start.x;
+        if (Math.Abs(t) > LineSegment.EPSILON)
+        {
+            return (t > 0) ? 1 : -1;
+        }
+        Vector3 v1 = s1.End - s1.Start;
+        Vector3 v2 = s2.End - s2.Start;
         Vector3 sweep = new Vector3(0, -1, 0);
         float a1, a2;
 
-        if (Vector3.Equals(v1, v2))
-        {
-            return 0;
-        }
-        v1 -= s1.Start;
-        v2 -= s2.Start;
         v1.Normalize();
         v2.Normalize();
         a1 = Vector3.Dot(sweep, v1);

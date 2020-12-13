@@ -66,8 +66,11 @@ public class LineMesh
 
     public void Update(int index, Color c)
     {
-        mColors[index] = c;
-        mColors[index + 1] = c;
+        if ((index >= 0) && (index < mColors.Count))
+        {
+            mColors[index] = c;
+            mColors[index + 1] = c;
+        }
     }
 
     public void Update(int index, LineSegment l)

@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Triangle
 {
-    public int VertexIndex;
+    public int VertexIndex = -1;
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
     public Edge[] Edges = new Edge[3];
@@ -199,7 +199,7 @@ public class Triangle
 
     public override string ToString()
     {
-        return String.Format("T {0:##} {1:#.#}, {2:#.#}, {3:#.#}",
+        return String.Format("T: {0:0} ({1:0.#}, {2:0.#}, {3:0.#})",
                             (this.VertexIndex / 3),
                             TriColor.r, TriColor.g, TriColor.b);
     }
