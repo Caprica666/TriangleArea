@@ -43,11 +43,11 @@ public class VertexEvent
     {
         if (mPoint == mEdge.Line.Start)
         {
-            return mEdge.ToString();
+            return mPoint + " " + mEdge.ToString();
         }
         else
         {
-            return " T: " + (mEdge.Tri.VertexIndex / 3) +
+            return mPoint + " T: " + (mEdge.Tri.VertexIndex / 3) +
                    " E: " + mEdge.EdgeIndex + " " +
                    End + " <- " + Start;
         }
@@ -57,6 +57,12 @@ public class VertexEvent
     {
         mPoint = point;
         mEdge = tri.Edges[vertexIndex];
+    }
+
+    public VertexEvent(Vector3 point, Edge edge)
+    {
+        mPoint = point;
+        mEdge = edge;
     }
 }
 

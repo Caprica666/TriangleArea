@@ -97,11 +97,7 @@ public class EdgeCompare : Comparer<Edge>
         {
             return (t > 0) ? 1 : -1;
         }
-        t = s1.Start.x - s2.Start.x;
-        if (Math.Abs(t) > LineSegment.EPSILON)
-        {
-            return (t > 0) ? 1 : -1;
-        }
+
         Vector3 v1 = s1.End - s1.Start;
         Vector3 v2 = s2.End - s2.Start;
         Vector3 sweep = new Vector3(0, -1, 0);
@@ -116,7 +112,7 @@ public class EdgeCompare : Comparer<Edge>
         {
             return (t > 0) ? 1 : -1;
         }
-        return 0;
+        return e1.Tri.GetHashCode() - e2.Tri.GetHashCode();
     }
 }
 

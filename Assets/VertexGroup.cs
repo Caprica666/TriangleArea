@@ -16,7 +16,7 @@ public class VertexGroup
     private TriangleMesh mTriMesh = null;
     private EventCompare mCompareEvents = new EventCompare();
     private EdgeCompare mCompareEdges = new EdgeCompare();
-    public bool DoDebug = true;
+    public int DebugLevel = 0;
 
     public VertexGroup(TriangleMesh tmesh, LineMesh lmesh = null, TriangleMesh cmesh = null)
     {
@@ -52,62 +52,6 @@ public class VertexGroup
         if (mClipMesh != null)
         {
             mClipMesh.Clear();
-        }
-    }
-
-    public void AddTriangles(List<Triangle> triangles)
-    {
-        try
-        {
-            foreach (Triangle t in triangles)
-            {
-                if (t.Vertices[2].x <= mCompareEdges.CurrentX)
-                {
-                    continue;
-                }
-                Color c = new Color(Random.value, Random.value, Random.value, 1);
-
-                t.VertexIndex = -1;
-                t.Edges[0].Line.VertexIndex = -1;
-                t.Edges[1].Line.VertexIndex = -1;
-                t.Edges[2].Line.VertexIndex = -1;
-                if (mTriMesh != null)
-                {
-                    mTriMesh.AddTriangle(t);
-                }
-                if (DoDebug)
-                {
-                    Debug.Log("Added Triangle " + t + " X = " + mCompareEdges.CurrentX);
-                }
-                for (int i = 0; i < 3; ++i)
-                {
-                    Vector3 v1 = t.Vertices[i];
-                    Vector3 v2 = t.Vertices[(i + 1) % 3];
-
-                    if (t.Vertices[i].x > mCompareEdges.CurrentX)
-                    {
-                        VertexEvent p1 = new VertexEvent(v1, t, i);
-                        mEventQ.Add(p1);
-                        if (DoDebug)
-                        {
-                            Debug.Log("   Adding event " + p1);
-                        }
-                    }
-                    if (t.Vertices[i].x > mCompareEdges.CurrentX)
-                    {
-                        VertexEvent p2 = new VertexEvent(v2, t, i);
-                        mEventQ.Add(p2);
-                        if (DoDebug)
-                        {
-                            Debug.Log("   Adding event " + p2);
-                        }
-                    }
-                }
-            }
-        }
-        catch (ArgumentException ex)
-        {
-            Debug.LogWarning(ex.Message);
         }
     }
 
@@ -153,11 +97,16 @@ public class VertexGroup
     }
     public void RemoveActive(Edge e, bool updateMesh = false)
     {
-        bool removed = mActiveLines.Remove(e);
         int vindex = e.Line.VertexIndex;
-        if (DoDebug)
+
+        if (vindex < 0)
         {
-            if (!removed && (vindex >= 0))
+            return;
+        }
+        bool removed = mActiveLines.Remove(e);
+        if (DebugLevel > 0)
+        {
+            if (!removed)
             {
                 Debug.LogError("ERROR: Cannot Remove Edge " + e + " X = " + mCompareEdges.CurrentX);
                 return;
@@ -170,45 +119,10 @@ public class VertexGroup
         }
     }
 
-    public bool RemoveTri(Triangle tri, bool removeactive = false)
-    {
-        if (tri.VertexIndex < 0)
-        {
-            return false;
-        }
-        if (DoDebug)
-        {
-            Debug.Log("Removed Triangle " + tri + " X = " + mCompareEdges.CurrentX);
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-            VertexEvent e1 = new VertexEvent(tri.Vertices[i], tri, i);
-            VertexEvent e2 = new VertexEvent(tri.Vertices[(i + 1) % 3], tri, i);
-
-            RemoveEvent(e1);
-            RemoveEvent(e2);
-            if (removeactive)
-            {
-                Edge edge = tri.Edges[i];
-                if ((edge.Line.End.x < mCompareEdges.CurrentX) &&
-                    (edge.Line.Start.x > mCompareEdges.CurrentX))
-                {
-                    RemoveActive(edge, true);
-                }
-            }
-        }
-        if ((mTriMesh != null) &&
-            (mTriMesh.RemoveTriangle(tri) < 0))
-        {
-            return false;
-        }
-        return true;
-    }
-
     public void AddActive(Edge e)
     {
         bool added = mActiveLines.Add(e);
-        if (DoDebug)
+        if (DebugLevel > 0)
         {
             if (added)
             {
@@ -226,11 +140,99 @@ public class VertexGroup
         }
     }
 
+    public bool RemoveTri(Triangle tri, bool removeactive = false)
+    {
+        if (tri.VertexIndex < 0)
+        {
+            return false;
+        }
+        if (DebugLevel > 0)
+        {
+            Debug.Log("Removed Triangle " + tri + " X = " + mCompareEdges.CurrentX);
+        }
+        for (int i = 0; i < 3; ++i)
+        {
+            VertexEvent e1 = new VertexEvent(tri.Vertices[i], tri, i);
+            VertexEvent e2 = new VertexEvent(tri.Vertices[(i + 1) % 3], tri, i);
+
+            RemoveEvent(e1);
+            RemoveEvent(e2);
+            if (removeactive)
+            {
+                Edge edge = tri.Edges[i];
+                if ((edge.Line.Start.x >= mCompareEdges.CurrentX) ||
+                    (edge.Line.End.x >= mCompareEdges.CurrentX))
+                {
+                    RemoveActive(edge, true);
+                }
+            }
+        }
+        if ((mTriMesh != null) &&
+            (mTriMesh.RemoveTriangle(tri) < 0))
+        {
+            return false;
+        }
+        return true;
+    }
+
+    public void AddTriangles(List<Triangle> triangles, bool clearindices = false)
+    {
+        try
+        {
+            foreach (Triangle t in triangles)
+            {
+                if (clearindices)
+                {
+                    t.VertexIndex = -1;
+                    t.Edges[0].Line.VertexIndex = -1;
+                    t.Edges[1].Line.VertexIndex = -1;
+                    t.Edges[2].Line.VertexIndex = -1;
+                }
+                if (t.Vertices[2].x <= mCompareEdges.CurrentX)
+                {
+                    if (mClipMesh != null)
+                    {
+                        mClipMesh.AddTriangle(t);
+                    }
+                    continue;
+                }
+                if (mTriMesh != null)
+                {
+                    mTriMesh.AddTriangle(t);
+                }
+                if (DebugLevel > 0)
+                {
+                    Debug.Log("Added Triangle " + t + " X = " + mCompareEdges.CurrentX);
+                }
+                for (int i = 0; i < 3; ++i)
+                {
+                    Vector3 v1 = t.Vertices[i];
+                    Vector3 v2 = t.Vertices[(i + 1) % 3];
+                    if (v1.x >= mCompareEdges.CurrentX)
+                    {
+                        VertexEvent p1 = new VertexEvent(v1, t, i);
+
+                        AddEvent(p1);
+                    }
+                    if (v2.x >= mCompareEdges.CurrentX)
+                    {
+                        VertexEvent p2 = new VertexEvent(v2, t, i);
+
+                        AddEvent(p2);
+                    }
+                }
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            Debug.LogWarning(ex.Message);
+        }
+    }
 
     public void RemoveEvent(VertexEvent e)
     {
         bool removed = mEventQ.Remove(e);
-        if (DoDebug)
+        if (DebugLevel > 1)
         {
             if (removed)
             {
@@ -239,6 +241,22 @@ public class VertexGroup
             else
             {
                 Debug.LogWarning("ERROR: Could not remove event " + e);
+            }
+        }
+    }
+
+    public void AddEvent(VertexEvent e)
+    {
+        bool added = mEventQ.Add(e);
+        if (DebugLevel > 1)
+        {
+            if (added)
+            {
+                Debug.Log("   Added event " + e);
+            }
+            else
+            {
+                Debug.LogWarning("ERROR: Could not add event " + e);
             }
         }
     }
@@ -252,7 +270,7 @@ public class VertexGroup
         switch (r)
         {
             case ClipResult.ACLIPSB:    // triB  was clipped
-            if (DoDebug)
+            if (DebugLevel > 0)
             {
                 Debug.Log("Edge " + edgeA + " clips Triangle " + edgeB.Tri);
             }
@@ -262,7 +280,7 @@ public class VertexGroup
             break;
 
             case ClipResult.BCLIPSA:    // tri A was clipped
-            if (DoDebug)
+            if (DebugLevel > 0)
             {
                 Debug.Log("Edge " + edgeB + " clips Triangle " + edgeA.Tri);
             }
@@ -272,7 +290,7 @@ public class VertexGroup
             break;
 
             case ClipResult.BINSIDEA:     // tri B inside A
-            if (DoDebug)
+            if (DebugLevel > 0)
             {
                 Debug.Log("Triangle " + edgeB.Tri + " inside Triangle " + edgeA.Tri);
             }
@@ -280,7 +298,7 @@ public class VertexGroup
             break;
 
             case ClipResult.AINSIDEB:     // tri A inside B
-            if (DoDebug)
+            if (DebugLevel > 0)
             {
                 Debug.Log("Triangle " + edgeA.Tri + " inside Triangle " + edgeB.Tri);
             }
@@ -310,9 +328,9 @@ public class VertexGroup
             }           
             collected.Add(e);
         }
-        if (DoDebug)
+        if (DebugLevel > 0)
         {
-            Debug.Log("Event point " + point + " " + collected.Count + " edges");
+            Debug.Log("Process events at " + point + " " + collected.Count + " edges");
         }
         return collected;
     }
@@ -323,6 +341,8 @@ public class VertexGroup
         {
             Vector3 point = new Vector3();
             List<VertexEvent> collected = CollectEdges(ref point);
+            List<Edge> addus = new List<Edge>();
+
             float prevX = mCompareEdges.CurrentX;
             float curX = point.x;
             Edge bottomNeighbor;
@@ -336,30 +356,12 @@ public class VertexGroup
                 return false;
             }
             edge = collected[0].TriEdge;
-            for (int i = 0; i < collected.Count - 1; ++i)
+            for (int i = 0; i < collected.Count; ++i)
             {
                 VertexEvent e1 = collected[i];
-                VertexEvent e2 = collected[i + 1];
                 t1 = e1.TriEdge.Tri;
 
                 RemoveEvent(e1);
-                /*
-                 * If consecutive edges are from different triangles,
-                 * check if the first edge clips or contains the second triangle.
-                 */
-                if (t1 != e2.TriEdge.Tri)
-                {
-                    r = CheckForIntersection(e1.TriEdge, e2.TriEdge);
-                    if (r > 0)
-                    {
-                        return true;
-                    }
-                    if (e2.TriEdge.Tri.Contains(t1))
-                    {
-                        RemoveTri(t1);
-                        return true;
-                    }
-                }
                 /*
                  * The line segment ends at this point.
                  * Remove it from the active list,
@@ -367,7 +369,7 @@ public class VertexGroup
                  */
                 if (e1.Line.End == point)
                 {
-                    RemoveActive(e1.TriEdge);
+                    RemoveActive(e1.TriEdge, true);
                     collected.RemoveAt(i--);
                     /*
                      * If this is the last triangle edge,
@@ -379,6 +381,33 @@ public class VertexGroup
                         if (RemoveTri(t1))
                         {
                             mClipMesh.AddTriangle(new Triangle(t1));
+                        }
+                    }
+                }
+                else
+                {
+                    RemoveActive(e1.TriEdge, false);
+                    addus.Add(e1.TriEdge);
+                    /*
+                     * If consecutive edges are from different triangles,
+                     * check if the first edge clips or contains the second triangle.
+                     */
+                    if (i < collected.Count - 1)
+                    {
+                        VertexEvent e2 = collected[i + 1];
+
+                        if (t1 != e2.TriEdge.Tri)
+                        {
+                            r = CheckForIntersection(e1.TriEdge, e2.TriEdge);
+                            if (r > 0)
+                            {
+                                return true;
+                            }
+                            if (e2.TriEdge.Tri.Contains(t1))
+                            {
+                                RemoveTri(t1, true);
+                                return true;
+                            }
                         }
                     }
                 }
@@ -412,14 +441,11 @@ public class VertexGroup
              */
             VertexEvent bottom = collected[0];
             VertexEvent top = collected[collected.Count - 1];
-            foreach (VertexEvent e in collected)
-            {
-                RemoveActive(e.TriEdge);
-            }
+
             mCompareEdges.CurrentX = curX;
-            foreach (VertexEvent e in collected)
+            foreach (Edge e in addus)
             {
-                AddActive(e.TriEdge);
+                AddActive(e);
             }
             bottomNeighbor = lineiter.FindBottomNeighbor(bottom.TriEdge);
             topNeighbor = lineiter.FindTopNeighbor(top.TriEdge);
@@ -435,7 +461,6 @@ public class VertexGroup
                     return true;
                 }
             }
-            collected.RemoveAt(0);
             RemoveEvent(top);
             /*
               * Check for intersection with the top neighbor

@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class TriangleArea : MonoBehaviour
 {
-    public bool EnableDebug;
+    public int DebugLevel = 0;
     public bool New;
     public bool PlaneSweep;
     public int Test = 0;
@@ -110,12 +110,12 @@ public class TriangleArea : MonoBehaviour
                 break;
 
                 case 1:
-                t1 = new Triangle(new Vector3(0.7f, -0.7f, 0),
-                                  new Vector3(2.3f, 2.9f, 0),
-                                  new Vector3(2.5f, 0.3f, 0));
-                t2 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
-                                  new Vector3(-1.0f, 2.3f, 0),
-                                  new Vector3(2.9f, 02.4f, 0));
+                t1 = new Triangle(new Vector3(-1.7f, 1.8f, 0),
+                                  new Vector3(-0.5f, 2.2f, 0),
+                                  new Vector3(2.9f, -0.5f, 0));
+                t2 = new Triangle(new Vector3(-1.8f, -2.2f, 0),
+                                  new Vector3(-1.0f, 2.7f, 0),
+                                  new Vector3(-0.2f, -0.2f, 0));
                 break;
             }
             mSaved.Add(t1);
@@ -211,8 +211,8 @@ public class TriangleArea : MonoBehaviour
         }
         mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
         mVertexGroup.Method = Method;
-        mVertexGroup.DoDebug = EnableDebug;
-        mVertexGroup.AddTriangles(mSaved);
+        mVertexGroup.DebugLevel = DebugLevel;
+        mVertexGroup.AddTriangles(mSaved, true);
         mTriMesh.Display();
         mClipMesh.Display();
         yield return new WaitForEndOfFrame();
