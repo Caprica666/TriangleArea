@@ -72,7 +72,11 @@ public class LineEnumerator : RBTree<Edge>.Enumerator
         {
             if (Current.Tri != l.Tri)
             {
-                return Current;
+                if (l.Tri.ID != Current.Tri.ID)
+                {
+                    return Current;
+                }
+                Debug.LogError("ERROR: Different triangles have the same ID " + l.Tri.ID);
             }
         }
         return null;
@@ -132,7 +136,11 @@ public class LineEnumerator : RBTree<Edge>.Enumerator
         {
             if (Current.Tri != l.Tri)
             {
-                return Current;
+                if (l.Tri.ID != Current.Tri.ID)
+                {
+                    return Current;
+                }
+                Debug.LogError("ERROR: Different triangles have the same ID " + l.Tri.ID);
             }
         }
         return null;

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
@@ -77,8 +78,20 @@ public class EventCompare : IComparer<VertexEvent>
         {
             return order;
         }
-        EdgeCompare lcompare = new EdgeCompare(p1.Point.x + 4 * LineSegment.EPSILON);
-        order = lcompare.Compare(p1.TriEdge, p2.TriEdge);
-        return order;
+        Vector3 v1 = p1.Line.End - p1.Line.Start;
+        Vector3 v2 = p2.Line.End - p2.Line.Start;
+        Vector3 sweep = new Vector3(0, -1, 0);
+        float a1, a2, t;
+
+        v1.Normalize();
+        v2.Normalize();
+        a1 = Vector3.Dot(sweep, v1);
+        a2 = Vector3.Dot(sweep, v2);
+        t = a2 - a1;
+        if (Math.Abs(t) > LineSegment.EPSILON)
+        {
+            return (t > 0) ? 1 : -1;
+        }
+        return p1.TriEdge.Tri.GetHashCode() - p2.TriEdge.Tri.GetHashCode();
      }
 }

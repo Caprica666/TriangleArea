@@ -205,10 +205,7 @@ public class TriangleArea : MonoBehaviour
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        foreach (Triangle t in mSaved)
-        {
-            t.VertexIndex = -1;
-        }
+        Triangle.NextID = 0;
         mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
         mVertexGroup.Method = Method;
         mVertexGroup.DebugLevel = DebugLevel;

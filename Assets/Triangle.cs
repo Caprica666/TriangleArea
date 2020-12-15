@@ -5,6 +5,8 @@ using UnityEngine;
 
 public class Triangle
 {
+    static public int NextID = 0;
+    public int ID = 0;
     public int VertexIndex = -1;
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
@@ -28,9 +30,15 @@ public class Triangle
              -1);
     }
 
+    public int GetNextID()
+    {
+        return NextID++;
+    }
+
     private void Init(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
     {
         VertexIndex = vindex;
+        ID = GetNextID();
         if (v1.x > v2.x)
         {
             if (v3.x < v2.x)       // v1 > v2 > v3
@@ -200,7 +208,6 @@ public class Triangle
     public override string ToString()
     {
         return String.Format("T: {0:0} ({1:0.#}, {2:0.#}, {3:0.#})",
-                            (this.VertexIndex / 3),
-                            TriColor.r, TriColor.g, TriColor.b);
+                            ID, TriColor.r, TriColor.g, TriColor.b);
     }
 }
