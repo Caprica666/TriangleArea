@@ -9,6 +9,7 @@ public class Edge
     private Triangle mTriangle;
     private LineSegment mLine;
     private int mEdgeIndex;
+    private List<VertexEvent> mIntersections = new List<VertexEvent>();
 
     public LineSegment Line
     {
@@ -20,9 +21,16 @@ public class Edge
         get { return mTriangle; }
     }
 
+    public List<VertexEvent> Intersections
+    {
+        get { return mIntersections; }
+        set { mIntersections = value; }
+    }
+
     public int EdgeIndex
     {
         get { return mEdgeIndex; }
+        set { mEdgeIndex = value; }
     }
 
     public Edge(Triangle tri, int edgeIndex)
@@ -33,6 +41,13 @@ public class Edge
                                 tri.GetVertex((edgeIndex + 1) % 3));
     }
 
+    public Edge(Triangle tri, Vector3 v1, Vector3 v2)
+    {
+        mTriangle = tri;
+        mEdgeIndex = -1;
+        mLine = new LineSegment(v1, v2);
+    }
+
     public Edge(Edge src, int edgeIndex)
     {
         mTriangle = src.mTriangle;
@@ -40,9 +55,9 @@ public class Edge
         mLine = src.Line;
     }
 
-    public bool IsCoincident(Edge e2)
+    public bool SameDirection(Edge e2)
     {
-        return Line.IsCoincident(e2.Line);
+        return Line.SameDirection(e2.Line);
     }
 
     public int FindIntersection(Edge e2, ref Vector3 intersection)
@@ -56,13 +71,96 @@ public class Edge
             }
             intersection.x = Line.Start.x;
             intersection.y = line2.CalcY(intersection.x);
-            if ((intersection.y >= Line.Start.y) && (intersection.y <= Line.End.y))
+            if ((intersection.y < Line.Start.y) || (intersection.y > Line.End.y))
             {
-                return 1;
+                return -1;
             }
-            return -1;
+            if ((intersection.y == Line.Start.y) || (intersection.y == Line.End.y))
+            {
+                return 0;
+            }
+            return 1;
         }
         return Line.FindIntersection(line2, ref intersection);
+    }
+
+    public bool AddIntersection(VertexEvent ve)
+    {
+        IComparer<VertexEvent> evcompare = new EventCompare();
+
+        for (int i = 0; i < mIntersections.Count; ++i)
+        {
+            VertexEvent ie = mIntersections[i];
+            if (evcompare.Compare(ie, ve) == 0)
+            {
+                return false;
+            }
+            if (ie.Point.x > ve.Point.x)
+            {
+                mIntersections.Insert(i, ve);
+                return true;
+            }
+        }
+        mIntersections.Add(ve);
+        return true;
+    }
+
+    public VertexEvent FindPrevIntersection(float x, ref Vector3 isect)
+    {
+        VertexEvent prev = null;
+        isect = Line.Start;
+        foreach (VertexEvent e in mIntersections)
+        {
+            float t = e.Point.x - x;
+
+            if (t >= 0)
+            {
+                break;
+            }
+            isect = e.Point;
+            prev = e;
+        }
+        return prev; 
+    }
+    public VertexEvent FindNextIntersection(float x, ref Vector3 isect)
+    {
+        foreach (VertexEvent e in mIntersections)
+        {
+            float t = e.Point.x - x;
+
+            if (t > 0)
+            {
+                isect = e.Point;
+                return e;
+            }
+        }
+        return null;
+    }
+
+    public int FindIntersectionIndex(float x)
+    {
+        for (int i = 0; i < mIntersections.Count; ++i)
+        {
+            VertexEvent e = mIntersections[i];
+            if (Math.Abs(e.Point.x - x) < LineSegment.EPSILON)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void RemoveIntersectionWith(Edge edge)
+    {
+        for (int i = 0; i < mIntersections.Count; ++i)
+        {
+            VertexEvent e = mIntersections[i];
+            if (e.IntersectingEdge == edge)
+            {
+                mIntersections.RemoveAt(i);
+                return;
+            }
+        }
     }
 
     public override string ToString()

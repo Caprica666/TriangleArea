@@ -8,6 +8,7 @@ public class VertexEvent
 {
     private Vector3 mPoint;
     private Edge mEdge;
+    private Edge mIntersectingEdge = null;
 
     public Vector3 Start
     {
@@ -27,6 +28,11 @@ public class VertexEvent
     public Edge TriEdge
     {
         get { return mEdge; }
+    }
+
+    public Edge IntersectingEdge
+    {
+        get { return mIntersectingEdge; }
     }
 
     public Vector3 Point
@@ -65,6 +71,13 @@ public class VertexEvent
         mPoint = point;
         mEdge = edge;
     }
+
+    public VertexEvent(Vector3 point, Edge edgeA, Edge edgeB)
+    {
+        mPoint = point;
+        mEdge = edgeA;
+        mIntersectingEdge = edgeB;
+    }
 }
 
 public class EventCompare : IComparer<VertexEvent>
@@ -91,6 +104,18 @@ public class EventCompare : IComparer<VertexEvent>
         if (Math.Abs(t) > LineSegment.EPSILON)
         {
             return (t > 0) ? 1 : -1;
+        }
+        if (p1.IntersectingEdge != p2.IntersectingEdge)
+        {
+            if (p1.IntersectingEdge == null)
+            {
+                return -1;
+            }
+            if (p2.IntersectingEdge == null)
+            {
+                return 1;
+            }
+            return p1.IntersectingEdge.GetHashCode() - p2.IntersectingEdge.GetHashCode();
         }
         return p1.TriEdge.Tri.GetHashCode() - p2.TriEdge.Tri.GetHashCode();
      }

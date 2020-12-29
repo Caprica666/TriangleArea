@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class LineSegment
 {
-    public const float EPSILON = 1e-5f;
+    public const float EPSILON = 2e-5f;
 
     public LineSegment(Vector3 start, Vector3 end)
     {
@@ -55,18 +55,22 @@ public class LineSegment
         return slope * (x - Start.x) + Start.y;
     }
 
-
-    public bool IsCoincident(LineSegment line2)
+    public Vector3 Direction
     {
-        Vector3 p1 = line2.Start;
-        Vector3 p2 = line2.End;
-        Vector3 p3 = Start;
-        Vector3 p4 = End;
-        Vector3 A = p2 - p1;
-        Vector3 B = p3 - p4;
-        float f = A.y * B.x - A.x * B.y;
+        get
+        {
+            Vector3 diff = mEnd - mStart;
+            return diff.normalized;
+        }
+    }
 
-        return (Math.Abs(f) < EPSILON);
+    public bool SameDirection(LineSegment line2)
+    {
+        float slope1 = Direction.y / Direction.x;
+        float slope2 = line2.Direction.y / line2.Direction.x;
+        float t = (slope2 - slope1);
+
+        return (Math.Abs(t) <= EPSILON);
     }
 
     public int FindIntersection(LineSegment line2, ref Vector3 intersection)
@@ -84,8 +88,7 @@ public class LineSegment
 
         // check to see if they are coincident
         if (Math.Abs(f) < EPSILON)
-        {
-            
+        {          
             return -1;
         }
         float t = d / f;

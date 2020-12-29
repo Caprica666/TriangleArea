@@ -63,6 +63,16 @@ public class EdgeClip
         // check to see if they are coincident
         if (Math.Abs(f) < EPSILON)
         {
+            if ((min1.x > min2.x) && (min1.x < max2.x))
+            {
+                IntersectionPoint = p1;
+                return COINCIDENT | INTERSECTING;
+            }
+            if ((max1.x > min2.x) && (max1.x < max2.x))
+            {
+                IntersectionPoint = p2;
+                return COINCIDENT | INTERSECTING;
+            }
             return COINCIDENT;
         }
         float t = d / f;
@@ -182,32 +192,36 @@ public class TriClip
         return false;
     }
 
-    public ClipResult ClipTri(Edge edgeA, Edge edgeB, List<Triangle> clipped)
+    public ClipResult ClipTri(Edge edgeA, Edge edgeB, List<Triangle> clippedtris)
     {
         if (TriAContainsTriB(edgeA, edgeB))
         {
             return ClipResult.BINSIDEA;
         }
-        List<EdgeClip> bclipped = new List<EdgeClip>();
+        List<EdgeClip> clippededges = new List<EdgeClip>();
         ClipResult r = ClipResult.OUTSIDE;
         int n;
 
         mCoincident = null;
-        n = ClipAgainstEdge(edgeA, edgeB, bclipped);
-        if ((n >= 2) &&
-            (mCoincident != edgeB) &&
-            ((bclipped[0].Status & EdgeClip.OUTSIDE) == 0))
+        n = ClipAgainstEdge(edgeA, edgeB, clippededges);
+        if (mCoincident == edgeB)
         {
-            r = ClipTriangles(edgeA.Tri, edgeB.Tri, bclipped[0], bclipped[1], clipped);
+            Edge adjacentA = edgeA.Tri.Edges[(edgeA.EdgeIndex + 2) % 3];
+            clippededges.Clear();
+            n = ClipAgainstEdge(adjacentA, edgeB, clippededges);
         }
-
+        if ((n >= 2) &&
+            ((clippededges[0].Status & EdgeClip.OUTSIDE) == 0))
+        {
+            r = ClipTriangles(edgeA.Tri, edgeB.Tri, clippededges[0], clippededges[1], clippedtris);
+        }
         switch (r)
         {
             case ClipResult.CLIPPED:
-            mIntersections[0] = bclipped[0].IntersectionPoint;
-            mIntersections[1] = bclipped[1].IntersectionPoint;
-            mClippedEdges[0] = bclipped[0].Clipped;
-            mClippedEdges[1] = bclipped[1].Clipped;
+            mIntersections[0] = clippededges[0].IntersectionPoint;
+            mIntersections[1] = clippededges[1].IntersectionPoint;
+            mClippedEdges[0] = clippededges[0].Clipped;
+            mClippedEdges[1] = clippededges[1].Clipped;
             return ClipResult.ACLIPSB;
 
             case ClipResult.INSIDE:
@@ -227,7 +241,11 @@ public class TriClip
             alledges[i] = new EdgeClip(edgeA, edgeB.Tri.Edges[i]);
             clipstatus[i] = alledges[i].Clip();
 
-            if ((clipstatus[i] & EdgeClip.INTERSECTING) != 0)
+            if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
+            {
+                mCoincident = alledges[i].Clipped;
+            }
+            else if ((clipstatus[i] & EdgeClip.INTERSECTING) != 0)
             {
                 if (clipstatus[i] == EdgeClip.INTERSECTING)
                 {
@@ -238,10 +256,6 @@ public class TriClip
                     clipedges.Add(alledges[i]);
                 }
                 ++intersected;
-            }
-            else if ((clipstatus[i] & EdgeClip.COINCIDENT) != 0)
-            {
-                mCoincident = alledges[i].Clipped;
             }
         }
         return intersected;

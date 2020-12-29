@@ -2,15 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 
 public class VertexGroup
 {
     public int Method = 0;
     private RBTree<VertexEvent> mEventQ;
+    private RBTree<VertexEvent> mIsectQ;
     private RBTree<Edge> mActiveLines;
-    private List<Vector3> mIntersections;
     private LineMesh mLineMesh = null;
     private TriangleMesh mClipMesh = null;
     private TriangleMesh mTriMesh = null;
@@ -24,6 +23,7 @@ public class VertexGroup
         mClipMesh = cmesh;
         mTriMesh = tmesh;
         mEventQ = new RBTree<VertexEvent>(mCompareEvents);
+        mIsectQ = new RBTree<VertexEvent>(mCompareEvents);
         mActiveLines = new RBTree<Edge>(mCompareEdges);
     }
 
@@ -57,10 +57,19 @@ public class VertexGroup
 
     public IEnumerator ShowIntersections()
     {
-        mIntersections = new List<Vector3>();
         LineEnumerator iter = new LineEnumerator(this);
 
-        while (Process(iter))
+        while (AccumulateIntersections(iter))
+        {
+            Display();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+            yield return new WaitForEndOfFrame();
+        }
+        Display();
+        IEnumerator iter2 = AccumulateTriangles();
+        while (iter2.MoveNext())
         {
             Display();
             yield return new WaitForEndOfFrame();
@@ -87,14 +96,6 @@ public class VertexGroup
         }
     }
 
-    public void FindIntersections(List<Vector3> intersections)
-    {
-        mIntersections = intersections;
-        LineEnumerator iter = new LineEnumerator(this);
-
-        while (Process(iter))
-            ;
-    }
     public void RemoveActive(Edge e, bool updateMesh = false)
     {
         int vindex = e.Line.VertexIndex;
@@ -137,75 +138,6 @@ public class VertexGroup
         }
     }
 
-    public bool RemoveTri(Triangle tri, bool removeactive = false)
-    {
-        if (tri.VertexIndex < 0)
-        {
-            return false;
-        }
-        if (DebugLevel > 0)
-        {
-            Debug.Log("Removed Triangle " + tri + " X = " + mCompareEdges.CurrentX);
-        }
-        for (int i = 0; i < 3; ++i)
-        {
-            VertexEvent e1 = new VertexEvent(tri.Vertices[i], tri, i);
-            VertexEvent e2 = new VertexEvent(tri.Vertices[(i + 1) % 3], tri, i);
-
-//            if (e1.Point.x <= mCompareEdges.CurrentX)
-            {
-                RemoveEvent(e1);
-            }
-//            if (e2.Point.x <= mCompareEdges.CurrentX)
-            {
-                RemoveEvent(e2);
-            }
-        }
-        if (removeactive)
-        {
-            RemoveActive(tri.Edges[0], true);
-            RemoveActive(tri.Edges[1], true);
-            RemoveActive(tri.Edges[2], true);
-            /*
-                        if (tri.Vertices[1].x > mCompareEdges.CurrentX)
-                        {
-                            RemoveActive(tri.Edges[0], true);
-                            RemoveActive(tri.Edges[2], true);
-                        }
-                        else if (tri.Vertices[2].x < mCompareEdges.CurrentX)
-                        {
-                            RemoveActive(tri.Edges[1], true);
-                            RemoveActive(tri.Edges[2], true);
-                        }
-            */
-        }
-        DebugCheckDelete(tri);
-        if ((mTriMesh != null) &&
-            (mTriMesh.RemoveTriangle(tri) < 0))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    private void DebugCheckDelete(Triangle tri)
-    {
-        foreach (VertexEvent e in mEventQ)
-        {
-            if (e.TriEdge.Tri == tri)
-            {
-                Debug.LogError("ERROR: event for deleted triangle still present " + e);
-            }
-        }
-        foreach (Edge edge in mActiveLines)
-        {
-            if (edge.Tri == tri)
-            {
-                Debug.LogError("ERROR: edge for deleted triangle still present " + edge);
-            }
-        }
-    }
-
     public void AddTriangles(List<Triangle> triangles, bool clearindices = false)
     {
         try
@@ -219,6 +151,9 @@ public class VertexGroup
                     t.Edges[0].Line.VertexIndex = -1;
                     t.Edges[1].Line.VertexIndex = -1;
                     t.Edges[2].Line.VertexIndex = -1;
+                    t.Edges[0].Intersections.Clear();
+                    t.Edges[1].Intersections.Clear();
+                    t.Edges[2].Intersections.Clear();
                 }
                 if (t.Vertices[2].x <= mCompareEdges.CurrentX)
                 {
@@ -245,12 +180,14 @@ public class VertexGroup
                     {
                         VertexEvent p1 = new VertexEvent(v1, t, i);
 
+                        p1.TriEdge.AddIntersection(p1);
                         AddEvent(p1);
                     }
                     if (v2.x > mCompareEdges.CurrentX)
                     {
                         VertexEvent p2 = new VertexEvent(v2, t, i);
 
+                        p2.TriEdge.AddIntersection(p2);
                         AddEvent(p2);
                     }
                 }
@@ -294,31 +231,100 @@ public class VertexGroup
 
     public ClipResult CheckForIntersection(Edge edgeA, Edge edgeB)
     {
-        TriClip clipper = new TriClip();
-        List<Triangle> trisClipped = new List<Triangle>();
-        ClipResult r = clipper.ClipTri(edgeA, edgeB, trisClipped);
+        Vector3 isect = new Vector3();
+        int r = edgeA.FindIntersection(edgeB, ref isect);
 
-        switch (r)
+        if ((r > 0) && (isect.x > mCompareEdges.CurrentX))
         {
-            case ClipResult.ACLIPSB:    // triB was clipped
-            if (DebugLevel > 0)
-            {
-                Debug.Log("Edge " + edgeA + " clips Triangle " + edgeB.Tri);
-            }
-            trisClipped[0].VertexIndex = edgeB.Tri.VertexIndex;
-            RemoveTri(edgeB.Tri, true);
-            AddTriangles(trisClipped);
-            break;
+            VertexEvent ve1 = new VertexEvent(isect, edgeA, edgeB);
+            VertexEvent ve2 = new VertexEvent(isect, edgeB, edgeA);
+            bool addedA = edgeA.AddIntersection(ve1);
+            bool addedB = edgeB.AddIntersection(ve2);
 
-            case ClipResult.BINSIDEA:     // tri B inside A
-            if (DebugLevel > 0)
+            if (addedA)
             {
-                Debug.Log("Triangle " + edgeB.Tri + " inside Triangle " + edgeA.Tri);
+                AddEvent(ve1);
             }
-            RemoveTri(edgeB.Tri, true);
-            break;
+            if (addedB)
+            {
+                AddEvent(ve2);
+            }
+            return ClipResult.CLIPPED;
         }
-        return r;
+        return ClipResult.COINCIDENT;
+    }
+
+    public VertexEvent HandleIntersection(Vector3 vc, VertexEvent eventA, VertexEvent eventB)
+    {
+        Edge edgeA = eventA.TriEdge;
+        Edge edgeB = eventB.TriEdge;
+        Vector3 va = eventA.Point;
+        Vector3 vb = new Vector3();
+        VertexEvent nextB = (edgeB.Line.End.x > vc.x) ?
+                             edgeB.FindNextIntersection(vc.x, ref vb) :
+                             edgeB.FindPrevIntersection(vc.x, ref vb);
+        VertexEvent nextA = (edgeA.Line.End.x > vc.x) ?
+                             edgeA.FindNextIntersection(vc.x, ref va) :
+                             edgeA.FindPrevIntersection(vc.x, ref va);
+        VertexEvent eventC;
+        Edge edgeC;
+
+        if (eventA.Line.SameDirection(eventB.Line))
+        {
+            if (nextA == null)
+            {
+                return eventB;
+            }
+            if (nextB == null)
+            {
+                return eventA;
+            }
+            return eventB;
+        }
+        if ((nextB == null) || (nextA == null))
+        {
+            return null;
+        }
+        edgeA.RemoveIntersectionWith(edgeB);
+        edgeB.RemoveIntersectionWith(edgeA);
+        nextB.TriEdge.RemoveIntersectionWith(edgeB);
+        EmitTriangle(va, vb, vc, true);
+        if (va.x < vb.x)
+        {
+            edgeC = new Edge(edgeA.Tri, va, vb);
+            eventC = new VertexEvent(va, edgeC, edgeA);
+            edgeC.AddIntersection(new VertexEvent(vb, edgeC, edgeB));
+            edgeC.AddIntersection(eventC);
+        }
+        else
+        {
+            edgeC = new Edge(edgeB.Tri, vb, va);
+            eventC = new VertexEvent(vb, edgeC, edgeA);
+            edgeC.AddIntersection(new VertexEvent(va, edgeC, edgeB));
+            edgeC.AddIntersection(eventC);
+        }
+        if ((nextB.IntersectingEdge == null) ||
+             !edgeC.SameDirection(nextB.IntersectingEdge))
+        {
+            mIsectQ.Add(eventC);
+        }
+        return nextB;
+    }
+
+    public void EmitTriangle(Vector3 va, Vector3 vb, Vector3 vc, bool display)
+    {
+        Triangle t = new Triangle(va, vb, vc);
+
+        if (display && (mClipMesh != null))
+        {
+            mClipMesh.AddTriangle(t);
+        }
+        if (mTriMesh != null)
+        {
+            t = new Triangle(va, vb, vc);
+            t.TriColor = new Color(0, 0, 0, 1);
+            mTriMesh.AddTriangle(t);
+        }
     }
 
     public List<VertexEvent> CollectEdges(ref Vector3 point)
@@ -348,21 +354,59 @@ public class VertexGroup
         return collected;
     }
 
-    public bool Process(LineEnumerator lineiter)
+   
+    public IEnumerator AccumulateTriangles()
+    {
+        Vector3 curpoint = new Vector3();
+        VertexEvent prevEvent = null;
+        IComparer<VertexEvent> eventcompare = new EventCompare();
+        IComparer<Vector3> veccompare = new VecCompare();
+        List<VertexEvent> collected = new List<VertexEvent>();
+        while (mIsectQ.Count > 0)
+        {
+            VertexEvent ve;
+
+            collected.Clear();
+            while (((ve = mIsectQ.Min) != null) &&
+                   (veccompare.Compare(ve.Point, curpoint) == 0))
+            {
+                collected.Add(ve);
+                mIsectQ.Remove(ve);
+            }
+            if (ve != null)
+            {
+                curpoint = ve.Point;
+            }
+            prevEvent = null;
+            foreach (VertexEvent ve2 in collected)
+            {
+                if (prevEvent != null)
+                {
+                    prevEvent = HandleIntersection(ve2.Point, prevEvent, ve2);
+                    yield return new WaitForEndOfFrame();
+                }
+                else
+                {
+                    prevEvent = ve2;
+                }
+            }
+        }
+        yield return null;
+    }
+
+    public bool AccumulateIntersections(LineEnumerator lineiter)
     {
         try
         {
             Vector3 point = new Vector3();
             List<VertexEvent> collected = CollectEdges(ref point);
             List<Edge> addus = new List<Edge>();
-            List<Triangle> removeus = new List<Triangle>();
             float prevX = mCompareEdges.CurrentX;
             float curX = point.x;
             Edge bottomNeighbor;
             Edge topNeighbor;
             Edge edge;
-            ClipResult r;
-            Triangle t1;
+            IComparer<VertexEvent> eventcompare = new EventCompare();
 
             if (collected == null)
             {
@@ -373,54 +417,22 @@ public class VertexGroup
             {
                 VertexEvent e1 = collected[i];
 
-                /*
-                 * The line segment ends at this point.
-                 * Remove it from the active list,
-                 * Dont consider it further.
-                 */
-                if (e1.Line.End == point)
+                RemoveEvent(e1);
+                if (e1.Line.Start == point)
                 {
-                    RemoveEvent(e1);
+                    addus.Add(e1.TriEdge);
+                    mIsectQ.Add(e1);
+                }
+                else if (e1.Line.End == point)
+                {
                     RemoveActive(e1.TriEdge, true);
                     collected.RemoveAt(i--);
-                    /*
-                     * If this is the last triangle edge,
-                     * remove the triangle
-                     */
-                    if ((point == e1.TriEdge.Tri.GetVertex(2)) &&
-                        (e1.TriEdge.EdgeIndex == 2))
-                    {
-                        removeus.Add(e1.TriEdge.Tri);
-                    }
                 }
                 else
                 {
                     RemoveActive(e1.TriEdge, false);
                     addus.Add(e1.TriEdge);
-                }
-            }
-            for (int i = 0; i < collected.Count - 1; ++i)
-            {
-                VertexEvent e1 = collected[i];
-                VertexEvent e2 = collected[i + 1];
-                t1 = e1.TriEdge.Tri;
-
-                RemoveEvent(e1);
-                /*
-                 * If consecutive edges are from different triangles,
-                 * check if the first edge clips or contains the second triangle.
-                 */
-                if (t1 != e2.TriEdge.Tri)
-                {
-                    r = CheckForIntersection(e1.TriEdge, e2.TriEdge);
-                    if (r > 0)
-                    {
-                        return true;
-                    }
-                    if (e2.TriEdge.Tri.Contains(t1))
-                    {
-                        removeus.Add(t1);
-                    }
+                    mIsectQ.Add(e1);
                 }
             }
             /*
@@ -429,14 +441,6 @@ public class VertexGroup
              * for possible intersection.
              */
             mCompareEdges.CurrentX = curX;
-            foreach (Triangle t in removeus)
-            {
-                if (RemoveTri(t, true) && (mClipMesh != null))
-                {
-                    t.VertexIndex = -1;
-                    mClipMesh.AddTriangle(t);
-                }
-            }
             if (collected.Count == 0)
             {
                 bottomNeighbor = lineiter.FindBottomNeighbor(edge);
@@ -445,7 +449,7 @@ public class VertexGroup
                     (topNeighbor != null) &&
                     (bottomNeighbor.Tri != topNeighbor.Tri))
                 {
-                    CheckForIntersection(bottomNeighbor, topNeighbor);
+                    CheckForIntersection(topNeighbor, bottomNeighbor);
                 }
                 return true;
             }
@@ -472,23 +476,14 @@ public class VertexGroup
              */
             if (bottomNeighbor != null)
             {
-                r = CheckForIntersection(bottomNeighbor, bottom.TriEdge);
-                if (r > 0)
-                {
-                    return true;
-                }
+                CheckForIntersection(bottom.TriEdge, bottomNeighbor);
             }
-            RemoveEvent(top);
             /*
               * Check for intersection with the top neighbor
               */
             if (topNeighbor != null)
             {
-                r = CheckForIntersection(topNeighbor, top.TriEdge);
-                if (r > 0)
-                {
-                    return true;
-                }
+                CheckForIntersection(top.TriEdge, topNeighbor);
             }
             return true;
         }
