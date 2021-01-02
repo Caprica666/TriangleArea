@@ -69,6 +69,15 @@ public class TriangleArea : MonoBehaviour
                                   new Vector3(1.5f, 2, 0));
                 break;
 
+                case 6:
+                t1 = new Triangle(new Vector3(-3, 3, 0),
+                                  new Vector3(-0.7f, -0.9f, 0),
+                                  new Vector3(-0.1f, 2.7f, 0));
+                t2 = new Triangle(new Vector3(-2.7f, -0.9f, 0),
+                                  new Vector3(0.9f, -1.6f, 0),
+                                  new Vector3(1.4f, 3, 0));
+                break;
+
                 case 5:
                 t1 = new Triangle(new Vector3(-3, -2.5f, 0),
                                   new Vector3(-1.1f, 2, 0),
