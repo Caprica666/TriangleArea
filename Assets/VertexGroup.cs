@@ -341,24 +341,24 @@ public class VertexGroup
         }
         if ((r > 0) && (isect.x > mCompareEdges.CurrentX))
         {
-            if (!CheckStart(edgeA, edgeB))
-            {
-                CheckEnd(edgeA, edgeB);
-            }
-            if (!CheckStart(edgeB, edgeA))
-            {
-                CheckEnd(edgeB, edgeA);
-            }
             VertexEvent ve1 = new VertexEvent(isect, edgeA, edgeB);
             VertexEvent ve2 = new VertexEvent(isect, edgeB, edgeA);
-            bool addedA = edgeA.AddIntersection(ve1);
-            bool addedB = edgeB.AddIntersection(ve2);
 
-            if (addedA)
+            if (CheckStart(edgeA, edgeB) ||
+                CheckEnd(edgeA, edgeB))
+            {
+                ;
+            }
+            else if (CheckStart(edgeB, edgeA) ||
+                     CheckEnd(edgeB, edgeA))
+            {
+                ;
+            }
+            if (edgeA.AddIntersection(ve1))
             {
                 AddEvent(ve1);
             }
-            if (addedB)
+            if (edgeB.AddIntersection(ve2))
             {
                 AddEvent(ve2);
             }
@@ -496,12 +496,13 @@ public class VertexGroup
                 if (prevEvent != null)
                 {
                     prevEvent = HandleIntersection(ve2.Point, prevEvent, ve2);
-                    yield return new WaitForEndOfFrame();
+                    if (prevEvent != null)
+                    {
+                        yield return new WaitForEndOfFrame();
+                        continue;
+                    }
                 }
-                else
-                {
-                    prevEvent = ve2;
-                }
+                prevEvent = ve2;
             }
         }
         yield return null;
