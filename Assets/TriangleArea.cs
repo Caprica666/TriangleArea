@@ -79,12 +79,16 @@ public class TriangleArea : MonoBehaviour
                 break;
 
                 case 5:
-                t1 = new Triangle(new Vector3(-3, -2.5f, 0),
-                                  new Vector3(-1.1f, 2, 0),
-                                  new Vector3(1.6f, -3, 0));
-                t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
-                                  new Vector3(0.2f, -0.1f, 0),
-                                  new Vector3(1.5f, 2, 0));
+                t1 = new Triangle(new Vector3(-1.3f, 1.8f, 0),
+                                  new Vector3(-1, -2, 0),
+                                  new Vector3(1, -1.4f, 0));
+                t2 = new Triangle(new Vector3(-1.7f, 2.5f, 0),
+                                  new Vector3(0.5f, -0.1f, 0),
+                                  new Vector3(-0.6f, -1, 0));
+                t3 = new Triangle(new Vector3(-2.2f, 1.2f, 0),
+                                  new Vector3(-0.7f, 2.6f, 0),
+                                  new Vector3(2, 0.5f, 0));
+                mSaved.Add(t3);
                 break;
 
                 case 4:
@@ -114,7 +118,7 @@ public class TriangleArea : MonoBehaviour
                                   new Vector3(0.9f, -2.4f, 0));
                 t3 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
                                   new Vector3(-1.0f, 2.3f, 0),
-                                  new Vector3(2.9f, 02.4f, 0));
+                                  new Vector3(2.9f, 2.4f, 0));
                 mSaved.Add(t3);
                 break;
 

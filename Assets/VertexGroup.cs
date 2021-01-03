@@ -396,12 +396,21 @@ public class VertexGroup
         }
         edgeA.RemoveIntersectionWith(edgeB);
         edgeB.RemoveIntersectionWith(edgeA);
-        nextB.TriEdge.RemoveIntersectionWith(edgeB);
 
         Vector3 mid = (va + vb) / 2;
-        bool display = (edgeA.Tri == edgeB.Tri) ||
-                        (edgeA.Tri.Contains(mid) >= 0) ||
-                        (edgeB.Tri.Contains(mid) >= 0);
+        bool display = (edgeA.Tri.Contains(mid) >= 0) ||
+                       (edgeB.Tri.Contains(mid) >= 0);
+
+        if (mLineMesh != null)
+        {
+            mLineMesh.Add(new LineSegment(vc, va));
+            mLineMesh.Add(new LineSegment(vc, vb));
+        }
+        if (!display)
+        {
+            return eventB;
+        }
+        nextB.TriEdge.RemoveIntersectionWith(edgeB);
         EmitTriangle(va, vb, vc, display);
         if (va.x < vb.x)
         {
@@ -421,6 +430,10 @@ public class VertexGroup
              !edgeC.SameDirection(nextB.IntersectingEdge))
         {
             mIsectQ.Add(eventC);
+            if (mLineMesh != null)
+            {
+                mLineMesh.Add(edgeC.Line);
+            }
         }
         return nextB;
     }
@@ -475,6 +488,11 @@ public class VertexGroup
         VertexEvent prevEvent = null;
         IComparer<Vector3> veccompare = new VecCompare();
         List<VertexEvent> collected = new List<VertexEvent>();
+
+        if (mLineMesh != null)
+        {
+            mLineMesh.Clear();
+        }
         while (mIsectQ.Count > 0)
         {
             VertexEvent ve;
