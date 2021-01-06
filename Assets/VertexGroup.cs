@@ -6,7 +6,6 @@ using UnityEngine;
 
 public class VertexGroup
 {
-    public int Method = 0;
     private RBTree<VertexEvent> mEventQ;
     private RBTree<VertexEvent> mIsectQ;
     private RBTree<Edge> mActiveLines;
@@ -59,6 +58,7 @@ public class VertexGroup
     {
         LineEnumerator iter = new LineEnumerator(this);
 
+        Edge.EdgeID = 0;
         while (AccumulateIntersections(iter))
         {
             Display();
@@ -271,19 +271,19 @@ public class VertexGroup
         {
             return false;
         }
-        int i = edgeB.FindIntersectionIndex(edgeB.Line.Start.x);
+        int i = edgeB.FindIntersectionIndex(edgeB.Line.Start);
         if (i >= 0)
         {
-            ve = edgeB.Intersections[0];
-            edgeB.Intersections.RemoveAt(0);
+            ve = edgeB.Intersections[i];
+            edgeB.Intersections.RemoveAt(i);
             mIsectQ.Remove(ve);
-            mEventQ.Remove(ve);
+//            mEventQ.Remove(ve);
         }
         i = (edgeB.EdgeIndex + 2) % 3;
 
         Edge adjacent = edgeB.Tri.Edges[i];
 
-        i = adjacent.FindIntersectionIndex(edgeB.Line.Start.x);
+        i = adjacent.FindIntersectionIndex(edgeB.Line.Start);
         if (i >= 0)
         {
             ve = adjacent.Intersections[i];
@@ -303,22 +303,22 @@ public class VertexGroup
         {
             return false;
         }
-        int i = edgeB.FindIntersectionIndex(edgeB.Line.End.x);
+        int i = edgeB.FindIntersectionIndex(edgeB.Line.End);
         if (i >= 0)
         {
             ve = edgeB.Intersections[i];
             mIsectQ.Remove(ve);
-            edgeB.Intersections.RemoveAt(n);
+            edgeB.Intersections.RemoveAt(i);
         }
         i = (edgeB.EdgeIndex + 2) % 3;
         Edge adjacent = edgeB.Tri.Edges[i];
 
-        i = adjacent.FindIntersectionIndex(edgeB.Line.End.x);
+        i = adjacent.FindIntersectionIndex(edgeB.Line.End);
         if (i >= 0)
         {
             ve = adjacent.Intersections[i];
             adjacent.Intersections.RemoveAt(i);
-            mEventQ.Remove(ve);
+//            mEventQ.Remove(ve);
             mIsectQ.Remove(ve);
         }
         return true;
@@ -329,15 +329,18 @@ public class VertexGroup
         Vector3 isect = new Vector3();
         int r = edgeA.FindIntersection(edgeB, ref isect);
 
-        if (edgeA.Tri.Contains(edgeB.Tri))
+        if (edgeA.Tri != edgeB.Tri)
         {
-            RemoveTri(edgeB.Tri);
-            return ClipResult.BINSIDEA;
-        }
-        else if (edgeB.Tri.Contains(edgeA.Tri))
-        {
-            RemoveTri(edgeA.Tri);
-            return ClipResult.AINSIDEB;
+            if (edgeA.Tri.Contains(edgeB.Tri))
+            {
+                RemoveTri(edgeB.Tri);
+                return ClipResult.BINSIDEA;
+            }
+            else if (edgeB.Tri.Contains(edgeA.Tri))
+            {
+                RemoveTri(edgeA.Tri);
+                return ClipResult.AINSIDEB;
+            }
         }
         if ((r > 0) && (isect.x > mCompareEdges.CurrentX))
         {
@@ -374,33 +377,67 @@ public class VertexGroup
         Vector3 va = eventA.Point;
         Vector3 vb = new Vector3();
         VertexEvent nextB = (edgeB.Line.End.x > vc.x) ?
-                             edgeB.FindNextIntersection(vc.x, ref vb) :
-                             edgeB.FindPrevIntersection(vc.x, ref vb);
+                             edgeB.FindNextIntersection(vc, ref vb) :
+                             edgeB.FindPrevIntersection(vc, ref vb);
         VertexEvent nextA = (edgeA.Line.End.x > vc.x) ?
-                             edgeA.FindNextIntersection(vc.x, ref va) :
-                             edgeA.FindPrevIntersection(vc.x, ref va);
+                             edgeA.FindNextIntersection(vc, ref va) :
+                             edgeA.FindPrevIntersection(vc, ref va);
         VertexEvent eventC;
         Edge edgeC;
 
-        if (nextB == null)
-        {
-            return eventA;
-        }
         if (eventA.Line.SameDirection(eventB.Line))
         {
             return eventB;
         }
+        if (nextB == null)
+        {
+            return eventA;
+        }
         if (nextA == null)
         {
-            return null;
+            return eventB;
+        }
+        if (nextA.Line.SameDirection(nextB.Line))
+        {
+            return eventB;
+        }
+        Triangle t = new Triangle(va, vb, vc);
+        bool display = edgeA.Tri.Contains(t);
+
+        if (edgeA.Tri != edgeB.Tri)
+        {
+            display |= edgeB.Tri.Contains(t);
         }
         edgeA.RemoveIntersectionWith(edgeB);
         edgeB.RemoveIntersectionWith(edgeA);
-
-        Vector3 mid = (va + vb) / 2;
-        bool display = (edgeA.Tri.Contains(mid) >= 0) ||
-                       (edgeB.Tri.Contains(mid) >= 0);
-
+        HideTriangle(t);
+        if ((nextA.IntersectingEdge != null) &&
+            (nextA.IntersectingEdge.Tri != edgeA.Tri) &&
+            (nextA.IntersectingEdge.Tri != edgeB.Tri))
+        {
+            display |= nextA.IntersectingEdge.Tri.Contains(t);
+        }
+        if (!display &&
+            (nextB.IntersectingEdge != null) &&
+            (nextB.IntersectingEdge.Tri != edgeB.Tri) &&
+            (nextB.IntersectingEdge.Tri != edgeA.Tri))
+        {
+            display |= nextB.IntersectingEdge.Tri.Contains(t);
+        }
+        if (!display &&
+            (eventA.IntersectingEdge != null) &&
+            (eventA.IntersectingEdge.Tri != edgeA.Tri) &&
+            (eventA.IntersectingEdge.Tri != edgeB.Tri))
+        {
+            display |= eventA.IntersectingEdge.Tri.Contains(t);
+        }
+        if (!display &&
+            (eventB.IntersectingEdge != null) &&
+            (eventB.IntersectingEdge.Tri != edgeB.Tri) &&
+            (eventB.IntersectingEdge.Tri != edgeA.Tri))
+        {
+            display |= eventB.IntersectingEdge.Tri.Contains(t);
+        }
         if (mLineMesh != null)
         {
             mLineMesh.Add(new LineSegment(vc, va));
@@ -410,8 +447,8 @@ public class VertexGroup
         {
             return eventB;
         }
+        EmitTriangle(t);
         nextB.TriEdge.RemoveIntersectionWith(edgeB);
-        EmitTriangle(va, vb, vc, display);
         if (va.x < vb.x)
         {
             edgeC = new Edge(edgeA.Tri, va, vb);
@@ -427,7 +464,7 @@ public class VertexGroup
             edgeC.AddIntersection(eventC);
         }
         if ((nextB.IntersectingEdge == null) ||
-             !edgeC.SameDirection(nextB.IntersectingEdge))
+            !edgeC.SameDirection(nextB.IntersectingEdge))
         {
             mIsectQ.Add(eventC);
             if (mLineMesh != null)
@@ -438,19 +475,21 @@ public class VertexGroup
         return nextB;
     }
 
-    public void EmitTriangle(Vector3 va, Vector3 vb, Vector3 vc, bool display)
+    public void HideTriangle(Triangle t)
     {
-        Triangle t = new Triangle(va, vb, vc);
-
-        if (display && (mClipMesh != null))
-        {
-            mClipMesh.AddTriangle(t);
-        }
         if (mTriMesh != null)
         {
-            t = new Triangle(va, vb, vc);
+            t = new Triangle(t);
             t.TriColor = new Color(1, 1, 1, 1);
             mTriMesh.AddTriangle(t);
+        }
+    }
+
+    public void EmitTriangle(Triangle t)
+    {
+        if (mClipMesh != null)
+        {
+            mClipMesh.AddTriangle(t);
         }
     }
 

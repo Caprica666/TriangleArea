@@ -13,7 +13,7 @@ public class Triangle
     public Edge[] Edges = new Edge[3];
     public Bounds BoundBox = new Bounds();
 
-    private static readonly float EPSILON = 2e-7f;
+    private static readonly float EPSILON = 2e-6f;
     public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = -1)
     {
         Init(v1, v2, v3, vindex);
@@ -141,10 +141,12 @@ public class Triangle
         bool betais0 = Math.Abs(beta) < EPSILON;
         bool gammais0 = Math.Abs(gamma) < EPSILON;
 
-//        if (alphais0 || betais0 || gammais0)
-//        {
-//            return 0;
-//        }
+        if ((alphais0 && betais0) ||
+            (alphais0 && gammais0) ||
+            (betais0 && gammais0))
+        {
+            return 0;
+        }
         if ((alpha >= 0) && (gamma >= 0) && betais0)
         {
             return 0;

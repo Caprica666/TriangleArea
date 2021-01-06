@@ -6,6 +6,7 @@ using Random = UnityEngine.Random;
 
 public class Edge
 {
+    static public int EdgeID = 0;
     private Triangle mTriangle;
     private LineSegment mLine;
     private int mEdgeIndex;
@@ -44,7 +45,7 @@ public class Edge
     public Edge(Triangle tri, Vector3 v1, Vector3 v2)
     {
         mTriangle = tri;
-        mEdgeIndex = -1;
+        mEdgeIndex = --EdgeID;
         mLine = new LineSegment(v1, v2);
     }
 
@@ -105,15 +106,15 @@ public class Edge
         return true;
     }
 
-    public VertexEvent FindPrevIntersection(float x, ref Vector3 isect)
+    public VertexEvent FindPrevIntersection(Vector3 p, ref Vector3 isect)
     {
         VertexEvent prev = null;
+        VecCompare vcompare = new VecCompare();
+
         isect = Line.Start;
         foreach (VertexEvent e in mIntersections)
         {
-            float t = e.Point.x - x;
-
-            if (t >= 0)
+            if (vcompare.Compare(e.Point, p) >= 0)
             {
                 break;
             }
@@ -122,13 +123,13 @@ public class Edge
         }
         return prev; 
     }
-    public VertexEvent FindNextIntersection(float x, ref Vector3 isect)
+    public VertexEvent FindNextIntersection(Vector3 p, ref Vector3 isect)
     {
+        VecCompare vcompare = new VecCompare();
+
         foreach (VertexEvent e in mIntersections)
         {
-            float t = e.Point.x - x;
-
-            if (t > 0)
+            if (vcompare.Compare(e.Point, p) > 0)
             {
                 isect = e.Point;
                 return e;
@@ -137,12 +138,14 @@ public class Edge
         return null;
     }
 
-    public int FindIntersectionIndex(float x)
+    public int FindIntersectionIndex(Vector3 p)
     {
+        VecCompare vcompare = new VecCompare();
+
         for (int i = 0; i < mIntersections.Count; ++i)
         {
             VertexEvent e = mIntersections[i];
-            if (Math.Abs(e.Point.x - x) < LineSegment.EPSILON)
+            if (vcompare.Compare(e.Point, p) == 0)
             {
                 return i;
             }

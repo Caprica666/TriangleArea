@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 
 public class TriangleArea : MonoBehaviour
@@ -8,7 +9,6 @@ public class TriangleArea : MonoBehaviour
     public bool New;
     public bool PlaneSweep;
     public int Test = 0;
-    public int Method = 1;
     public int TriangleCount = 2;
 
     private float mMaxDist = 5;
@@ -35,13 +35,31 @@ public class TriangleArea : MonoBehaviour
         mLinesToRender = new LineMesh(lines.GetComponent<MeshFilter>().mesh);
         mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
     }
+    private void DumpTris()
+    {
+        string s = "";
+        foreach (Triangle t in mSaved)
+        {
+            s += string.Format("t{0} = new Triangle(new Vector3({1:F2}f, {2:F2}f, 0),\n",
+                              t.ID, t.Vertices[0].x, t.Vertices[0].y);
+            s += string.Format("       new Vector3({0:F2}f, {1:F2}f, 0),\n", t.Vertices[1].x, t.Vertices[1].y);
+            s += string.Format("       new Vector3({0:F2}f, {1:F2}f, 0));\n", t.Vertices[2].x, t.Vertices[2].y);
+            s += string.Format("mSaved.Add(t{0});\n", t.ID);
+        }
+        using (StreamWriter sw = new StreamWriter("Assets/Resources/dumptris.txt", false))
+        {
+            sw.WriteLine(s);
+        }
+    }
 
     private void Update()
     {
         if (New)
         {
             New = false;
+            Triangle.NextID = 1;
             mSaved = NewTriangles(mBounds, TriangleCount * 3);
+            DumpTris();
             mTriMesh.Clear();
             mClipMesh.Clear();
             mLinesToRender.Clear();
@@ -55,18 +73,64 @@ public class TriangleArea : MonoBehaviour
             Triangle t1;
             Triangle t2;
             Triangle t3;
+            Triangle t4;
             mSaved = new List<Triangle>();
 
             Test = 0;
+            Triangle.NextID = 1;
             switch (test)
             {
                 default:
-                t1 = new Triangle(new Vector3(-3, -2.5f, 0),
-                                  new Vector3(-1.1f, 2, 0),
-                                  new Vector3(1.5f, -3, 0));
-                t2 = new Triangle(new Vector3(0.1f, -1.5f, 0),
-                                  new Vector3(0.2f, -0.1f, 0),
-                                  new Vector3(1.5f, 2, 0));
+                t1 = new Triangle(new Vector3(-2.586087f, -2.360384f, 0),
+                       new Vector3(1.06385f, -0.7719954f, 0),
+                       new Vector3(1.718421f, -1.578218f, 0));
+                mSaved.Add(t1);
+                t2 = new Triangle(new Vector3(-1.303229f, 2.32004f, 0),
+                       new Vector3(-1.13105f, 0.009066224f, 0),
+                       new Vector3(2.628216f, -0.2844783f, 0));
+                mSaved.Add(t2);
+                t3 = new Triangle(new Vector3(-2.547115f, 2.996363f, 0),
+                       new Vector3(-0.5711836f, 0.9053518f, 0),
+                       new Vector3(0.1544706f, 2.658429f, 0));
+                mSaved.Add(t3);
+                t4 = new Triangle(new Vector3(-1.125813f, -1.105803f, 0),
+                       new Vector3(1.238285f, 2.562901f, 0),
+                       new Vector3(2.746977f, 1.44003f, 0));
+                mSaved.Add(t4);
+                break;
+
+                case 8:
+                t1 = new Triangle(new Vector3(-2.1f, 2.2f, 0),
+                                  new Vector3(-1.7f, -1.3f, 0),
+                                  new Vector3(2, 0.6f, 0));
+                t2 = new Triangle(new Vector3(0.8f, -2.7f, 0),
+                                  new Vector3(2.3f, 0.6f, 0),
+                                  new Vector3(2.6f, -1.9f, 0));
+                t3 = new Triangle(new Vector3(-2.2f, 2.3f, 0),
+                                  new Vector3(0.4f, 0.6f, 0),
+                                  new Vector3(1.8f, -2.7f, 0));
+                t4 = new Triangle(new Vector3(-2.9f, -2.8f, 0),
+                                  new Vector3(-1.3f, -1.1f, 0),
+                                  new Vector3(1, -2.3f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
+                mSaved.Add(t3);
+                mSaved.Add(t4);
+                break;
+
+                case 7:
+                t1 = new Triangle(new Vector3(-3, -0.5f, 0),
+                                  new Vector3(-1.3f, 3, 0),
+                                  new Vector3(-0.8f, -0.5f, 0));
+                t2 = new Triangle(new Vector3(-2.4f, 1.5f, 0),
+                                  new Vector3(0, 1.5f, 0),
+                                  new Vector3(2.5f, -1.5f, 0));
+                t3 = new Triangle(new Vector3(-3, -1, 0),
+                                  new Vector3(-1.5f, 2, 0),
+                                  new Vector3(-0.5f, 0.5f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
+                mSaved.Add(t3);
                 break;
 
                 case 6:
@@ -76,6 +140,8 @@ public class TriangleArea : MonoBehaviour
                 t2 = new Triangle(new Vector3(-2.7f, -0.9f, 0),
                                   new Vector3(0.9f, -1.6f, 0),
                                   new Vector3(1.4f, 3, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 break;
 
                 case 5:
@@ -88,6 +154,8 @@ public class TriangleArea : MonoBehaviour
                 t3 = new Triangle(new Vector3(-2.2f, 1.2f, 0),
                                   new Vector3(-0.7f, 2.6f, 0),
                                   new Vector3(2, 0.5f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 mSaved.Add(t3);
                 break;
 
@@ -98,6 +166,8 @@ public class TriangleArea : MonoBehaviour
                 t2 = new Triangle(new Vector3(-0.8f, -1.4f, 0),
                                   new Vector3(2.5f, -0.8f, 0),
                                   new Vector3(2.6f, 1.2f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 break;
 
                 case 3:
@@ -107,6 +177,8 @@ public class TriangleArea : MonoBehaviour
                 t2 = new Triangle(new Vector3(-1.7f, 2.1f, 0),
                                   new Vector3(1.1f, -1.9f, 0),
                                   new Vector3(1.4f, 0.2f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 break;
 
                 case 2:
@@ -119,6 +191,8 @@ public class TriangleArea : MonoBehaviour
                 t3 = new Triangle(new Vector3(-1.9f, -0.6f, 0),
                                   new Vector3(-1.0f, 2.3f, 0),
                                   new Vector3(2.9f, 2.4f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 mSaved.Add(t3);
                 break;
 
@@ -129,10 +203,10 @@ public class TriangleArea : MonoBehaviour
                 t2 = new Triangle(new Vector3(-1.8f, -2.2f, 0),
                                   new Vector3(-1.0f, 2.7f, 0),
                                   new Vector3(-0.2f, -0.2f, 0));
+                mSaved.Add(t1);
+                mSaved.Add(t2);
                 break;
             }
-            mSaved.Add(t1);
-            mSaved.Add(t2);
             TriangleCount = mSaved.Count;
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
@@ -218,9 +292,8 @@ public class TriangleArea : MonoBehaviour
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        Triangle.NextID = 0;
+        Triangle.NextID = 1;
         mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
-        mVertexGroup.Method = Method;
         mVertexGroup.DebugLevel = DebugLevel;
         mVertexGroup.AddTriangles(mSaved, true);
         mTriMesh.Display();
