@@ -214,6 +214,8 @@ public class VertexGroup
             VertexEvent e1 = new VertexEvent(tri.Vertices[i], tri, i);
             VertexEvent e2 = new VertexEvent(tri.Vertices[(i + 1) % 3], tri, i);
 
+            mIsectQ.Remove(e1);
+            mIsectQ.Remove(e2);
             RemoveEvent(e1);
             RemoveEvent(e2);
         }
@@ -333,12 +335,12 @@ public class VertexGroup
         {
             if (edgeA.Tri.Contains(edgeB.Tri))
             {
-                RemoveTri(edgeB.Tri);
+                RemoveTri(edgeB.Tri, true);
                 return ClipResult.BINSIDEA;
             }
             else if (edgeB.Tri.Contains(edgeA.Tri))
             {
-                RemoveTri(edgeA.Tri);
+                RemoveTri(edgeA.Tri, true);
                 return ClipResult.AINSIDEB;
             }
         }

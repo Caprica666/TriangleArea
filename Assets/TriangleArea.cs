@@ -81,21 +81,17 @@ public class TriangleArea : MonoBehaviour
             switch (test)
             {
                 default:
-                t1 = new Triangle(new Vector3(-2.586087f, -2.360384f, 0),
-                       new Vector3(1.06385f, -0.7719954f, 0),
-                       new Vector3(1.718421f, -1.578218f, 0));
+                t1 = new Triangle(new Vector3(-1.7f, 3, 0),
+                       new Vector3(-1.7f, -0.7f, 0),
+                       new Vector3(1, 1.3f, 0));
                 mSaved.Add(t1);
-                t2 = new Triangle(new Vector3(-1.303229f, 2.32004f, 0),
-                       new Vector3(-1.13105f, 0.009066224f, 0),
-                       new Vector3(2.628216f, -0.2844783f, 0));
+                t2 = new Triangle(new Vector3(-1.3f, 2, 0),
+                       new Vector3(-1.3f, -1.3f, 0),
+                       new Vector3(0, 1, 0));
                 mSaved.Add(t2);
-                t3 = new Triangle(new Vector3(-2.547115f, 2.996363f, 0),
-                       new Vector3(-0.5711836f, 0.9053518f, 0),
-                       new Vector3(0.1544706f, 2.658429f, 0));
-                mSaved.Add(t3);
-                t4 = new Triangle(new Vector3(-1.125813f, -1.105803f, 0),
-                       new Vector3(1.238285f, 2.562901f, 0),
-                       new Vector3(2.746977f, 1.44003f, 0));
+                t4 = new Triangle(new Vector3(-2.66f, -1, 0),
+                       new Vector3(-1.3f, 0.5f, 0),
+                       new Vector3(-0.5f, -1.5f, 0));
                 mSaved.Add(t4);
                 break;
 
