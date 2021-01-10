@@ -9,21 +9,35 @@ public class LineSegment
 
     public LineSegment(Vector3 start, Vector3 end)
     {
+        float dx = start.x - end.x;
         mStart = start;
         mEnd = end;
-        if (mEnd.x < mStart.x)
+
+        if (Math.Abs(dx) > EPSILON) // X values are different
         {
-            mStart = end;
-            mEnd = start;
+            if (mEnd.x < mStart.x)  // descending X order
+            {
+                mStart = end;
+                mEnd = start;
+            }
+            else
+            {
+                mStart = start;
+                mEnd = end;
+            }
         }
         else
         {
-            mStart = start;
-            mEnd = end;
-        }
-        if (mStart.x > mEnd.x)
-        {
-            throw new ArgumentException("Start X > End X");
+            if (mEnd.y < mStart.y)  // descending Y order
+            {
+                mStart = end;
+                mEnd = start;
+            }
+            else
+            {
+                mStart = start;
+                mEnd = end;
+            }
         }
     }
 
@@ -50,6 +64,11 @@ public class LineSegment
     public float CalcY(float x)
     {
         Vector3 delta = End - Start;
+
+        if (Math.Abs(delta.x) < EPSILON)
+        {
+            return float.MaxValue;
+        }
         float slope = delta.y / delta.x;
 
         return slope * (x - Start.x) + Start.y;

@@ -88,6 +88,7 @@ public class Edge
     public bool AddIntersection(VertexEvent ve)
     {
         IComparer<VertexEvent> evcompare = new EventCompare();
+        VecCompare veccompare = new VecCompare();
 
         for (int i = 0; i < mIntersections.Count; ++i)
         {
@@ -96,7 +97,7 @@ public class Edge
             {
                 return false;
             }
-            if (ie.Point.x > ve.Point.x)
+            if (veccompare.Compare(ie.Point, ve.Point) > 0)
             {
                 mIntersections.Insert(i, ve);
                 return true;
@@ -169,7 +170,7 @@ public class Edge
     public override string ToString()
     {
         return String.Format("T: {0:0} E: {1:0} ",
-                             (Tri.VertexIndex / 3), EdgeIndex) +
+                             Tri.ID, EdgeIndex) +
                Line.ToString();
     }
 }
@@ -184,31 +185,105 @@ public class EdgeCompare : Comparer<Edge>
 
     public override int Compare(Edge e1, Edge e2)
     {
-        LineSegment s1 = e1.Line;
-        LineSegment s2 = e2.Line;
-        float y1 = s1.CalcY(CurrentX);
-        float y2 = s2.CalcY(CurrentX);
-        float t = y1 - y2;
-
         if (e1 == e2)
         {
             return 0;
         }
-        if (Math.Abs(t) > LineSegment.EPSILON)
-        {
-            return (t > 0) ? 1 : -1;
-        }
 
+        LineSegment s1 = e1.Line;
+        LineSegment s2 = e2.Line;
         Vector3 v1 = s1.End - s1.Start;
         Vector3 v2 = s2.End - s2.Start;
-        Vector3 sweep = new Vector3(0, -1, 0);
-        float a1, a2;
+        float y1 = s1.CalcY(CurrentX);
+        float y2 = s2.CalcY(CurrentX);
+        float dx = s1.Start.x - CurrentX;
 
+
+        //
+        // Check for vertical lines
+        //
+        if (y1 == float.MaxValue)
+        {
+            if (y2 == float.MaxValue)
+            {
+                // both vertical, sort on X
+                dx = s1.Start.x - s2.Start.x;
+                if (Math.Abs(dx) > LineSegment.EPSILON)
+                {
+                    return (dx > 0) ? 1 : -1;
+                }
+                return e1.Tri.GetHashCode() - e2.Tri.GetHashCode();
+            }
+            //
+            // first edge is vertical, not the second
+            // if no overlap, sort on starting x
+            //
+            if (s1.Start.x < s2.Start.x)
+            {
+                return -1;
+            }
+            if (s1.Start.x > s2.End.x)
+            {
+                return 1;
+            }
+            if (Math.Abs(dx) < LineSegment.EPSILON)
+            {
+                y1 = y2;
+            }
+            else if (dx < 0)
+            {
+                y1 = s1.Start.y;
+            }
+            else
+            {
+                y1 = s1.End.y;
+            }
+        }
+        //
+        // second edge is vertical, not the first
+        // if no overlap, sort on starting x
+        //
+        if (y2 == float.MaxValue)
+        {
+            if (s2.Start.x < s1.Start.x)
+            {
+                return 1;
+            }
+            if (s2.Start.x > s1.End.x)
+            {
+                return -1;
+            }
+            if (Math.Abs(dx) < LineSegment.EPSILON)
+            {
+                y2 = y1;
+            }
+            else if (dx < 0)
+            {
+                y2 = s2.Start.y;
+            }
+            else
+            {
+                y2 = s2.End.y;
+            }
+        }
+        //
+        // Compare Y values at the current X
+        //
+        float dy = y1 - y2;
+
+        if (Math.Abs(dy) > LineSegment.EPSILON)
+        {
+            return (dy > 0) ? 1 : -1;
+        }
         v1.Normalize();
         v2.Normalize();
-        a1 = Vector3.Dot(sweep, v1);
-        a2 = Vector3.Dot(sweep, v2);
-        t = a2 - a1;
+        //
+        // sort based on angle around common point
+        //
+        Vector3 sweep = new Vector3(0, -1, 0);
+        float a1 = Vector3.Dot(sweep, v1);
+        float a2 = Vector3.Dot(sweep, v2);
+        float t = a2 - a1;
         if (Math.Abs(t) > LineSegment.EPSILON)
         {
             return (t > 0) ? 1 : -1;

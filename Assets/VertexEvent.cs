@@ -54,7 +54,7 @@ public class VertexEvent
         }
         else
         {
-            return mPoint + " T: " + (mEdge.Tri.VertexIndex / 3) +
+            return mPoint + " T: " + mEdge.Tri.ID +
                    " E: " + mEdge.EdgeIndex + " " +
                    End + " <- " + Start;
         }

@@ -19,6 +19,7 @@ public class TriangleArea : MonoBehaviour
     private Rect mBounds = new Rect(0, 0, 6, 6);
     private VertexGroup mVertexGroup;
     private LineMesh mLinesToRender;
+    private PointMesh mIntersections;
 
     // Start is called before the first frame update
     void Start()
@@ -33,7 +34,10 @@ public class TriangleArea : MonoBehaviour
         mTriMesh = gameObject.GetComponent<TriangleMesh>();
         mClipMesh = cliplist.GetComponent<TriangleMesh>();
         mLinesToRender = new LineMesh(lines.GetComponent<MeshFilter>().mesh);
-        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
+        GameObject intersections = GameObject.Find("Intersections");
+        MeshFilter mf = intersections.GetComponent<MeshFilter>() as MeshFilter;
+        mIntersections = new PointMesh(mf.mesh);
+        mIntersections.PointSize = 0.1f;
     }
     private void DumpTris()
     {
@@ -63,6 +67,7 @@ public class TriangleArea : MonoBehaviour
             mTriMesh.Clear();
             mClipMesh.Clear();
             mLinesToRender.Clear();
+            mIntersections.Clear();
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
             mClipMesh.VertexCount = TriangleCount * 3;
@@ -193,14 +198,18 @@ public class TriangleArea : MonoBehaviour
                 break;
 
                 case 1:
-                t1 = new Triangle(new Vector3(-1.7f, 1.8f, 0),
-                                  new Vector3(-0.5f, 2.2f, 0),
-                                  new Vector3(2.9f, -0.5f, 0));
-                t2 = new Triangle(new Vector3(-1.8f, -2.2f, 0),
-                                  new Vector3(-1.0f, 2.7f, 0),
-                                  new Vector3(-0.2f, -0.2f, 0));
+                t1 = new Triangle(new Vector3(-1.48f, -1.08f, 0),
+                       new Vector3(1.02f, 1.52f, 0),
+                       new Vector3(2.94f, -1.59f, 0));
                 mSaved.Add(t1);
+                t2 = new Triangle(new Vector3(-2.44f, -2.10f, 0),
+                       new Vector3(0.47f, 2.50f, 0),
+                       new Vector3(1.44f, 0.42f, 0));
                 mSaved.Add(t2);
+                t3 = new Triangle(new Vector3(-2.58f, -1.31f, 0),
+                       new Vector3(-1.02f, 2.85f, 0),
+                       new Vector3(-0.37f, 1.40f, 0));
+                mSaved.Add(t3);
                 break;
             }
             TriangleCount = mSaved.Count;
@@ -285,11 +294,12 @@ public class TriangleArea : MonoBehaviour
         mTriMesh.Clear();
         mClipMesh.Clear();
         mLinesToRender.Clear();
+        mIntersections.Clear();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         Triangle.NextID = 1;
-        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh);
+        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh, mIntersections);
         mVertexGroup.DebugLevel = DebugLevel;
         mVertexGroup.AddTriangles(mSaved, true);
         mTriMesh.Display();

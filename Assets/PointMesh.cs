@@ -57,7 +57,9 @@ public class PointMesh
 
     public int Add(Vector3 v)
     {
-        return Add(v, new Color(Random.value, Random.value, Random.value, 1));
+//        Color c = new Color(Random.value, Random.value, Random.value, 1);
+        Color c = new Color(0, 0, 0, 1);
+        return Add(v, c);
     }
 
     public void MakeMesh(List<Vector3> pointlist)

@@ -207,6 +207,19 @@ public class Triangle
         return false;
     }
 
+    public int FindVertexIndex(Vector3 v)
+    {
+        VecCompare vcompare = new VecCompare();
+
+        for (int i = 0; i < 3; ++i)
+        {
+            if (vcompare.Compare(Vertices[i], v) == 0)
+            {
+                return i;
+            }
+        }
+        return -1;
+    }
     public override string ToString()
     {
         return String.Format("T: {0:0} ({1:0.#}, {2:0.#}, {3:0.#})",
