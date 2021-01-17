@@ -398,74 +398,154 @@ public class VertexGroup
         VertexEvent nextA = (vcompare.Compare(edgeA.Line.End, vc) > 0) ?
                             edgeA.FindNextIntersection(vc, ref va) :
                             edgeA.FindPrevIntersection(vc, ref va);
-        Edge edgeC;
+        VertexEvent eventC;
 
+        if (nextA == null)
+        {
+            return eventB;
+        }
+        if (nextB == null)
+        {
+            return eventA;
+        }
         while (!eventA.Line.SameDirection(eventB.Line))
         {
-            if (nextA == null)
-            {
-                break;
-            }
-            if (nextB == null)
-            {
-                return eventA;
-            }
-            if (nextA.Line.SameDirection(nextB.Line))
-            {
-                break;
-            }
-            VertexEvent eventC = CreateNewTriangle(vc, nextA, nextB);
+            eventC = CreateNewTriangle(vc, nextA, nextB);
             if (eventC != null)
             {
                 break;
             }
-            edgeC = nextA.IntersectingEdge;
-            if (edgeC == null)
-            {
-                edgeC = edgeA.Tri.Edges[(edgeA.EdgeIndex + 2) % 3];
-            }
-            VertexEvent nextC = ((edgeC.Line.Direction.x * edgeC.Line.Direction.y) > 0) ?
-                            edgeC.FindNextIntersection(va, ref vb) :
-                            edgeC.FindPrevIntersection(va, ref vb);
-            if (nextC == null)
-            {
-                int i = edgeA.Tri.FindVertexIndex(va);
-                if (i < 0)
-                {
-                    break;
-                }
-                Edge temp = edgeA.Tri.Edges[(i + 2) % 3];
-                i = temp.FindIntersectionIndex(va);
-                if (i < 0)
-                {
-                    break;
-                }
-                nextC = ((temp.Line.Direction.x * temp.Line.Direction.y) > 0) ?
-                            temp.FindNextIntersection(va, ref vb) :
-                            temp.FindPrevIntersection(va, ref vb);
-                if (nextC == null)
-                {
-                    break;
-                }
-                if (nextC.IntersectingEdge != null)
-                {
-                    i = nextC.IntersectingEdge.FindIntersectionIndex(vb);
-                    if (i >= 0)
-                    {
-                        nextC = nextC.IntersectingEdge.Intersections[i];
-                    }
-                }
-            }
-            eventA = CreateNewTriangle(va, eventA, nextC);
-            if (eventA == null)
+            if (FollowCCW(ref eventA, ref nextA, ref va) == null)
             {
                 break;
             }
-            edgeA = eventA.TriEdge;
-            nextA = nextC;
-            va = vb;
+        }
+        VertexEvent temp = eventB;
+        while (!eventA.Line.SameDirection(temp.Line))
+        {
+            if (FollowCW(ref temp, ref nextB, ref vb) == null)
+            {
+                break;
+            }
+            eventC = CreateNewTriangle(vc, nextA, nextB);
+            if (eventC != null)
+            {
+                break;
+            }
         }
         return eventB;
+    }
+
+    public VertexEvent FollowCW(ref VertexEvent eventA, ref VertexEvent nextA, ref Vector3 va)
+    {
+        Edge edgeC = nextA.IntersectingEdge;
+        Edge edgeA = eventA.TriEdge;
+        Vector3 vb = new Vector3();
+        VertexEvent tempEvent;
+
+        if ((edgeC == null) && (edgeA.EdgeIndex >= 0))
+        {
+            edgeC = edgeA.Tri.Edges[(edgeA.EdgeIndex + 1) % 3];
+        }
+        else
+        {
+            return null;
+        }
+        tempEvent = ((edgeC.Line.Direction.x * edgeC.Line.Direction.y) < 0) ?
+                    edgeC.FindNextIntersection(va, ref vb) :
+                    edgeC.FindPrevIntersection(va, ref vb);
+        if (tempEvent == null)
+        {
+            int i = edgeA.Tri.FindVertexIndex(va);
+            if (i < 0)
+            {
+                return null;
+            }
+            Edge tempEdge = edgeA.Tri.Edges[(i + 2) % 3];
+            i = tempEdge.FindIntersectionIndex(va);
+            if (i < 0)
+            {
+                return null;
+            }
+            tempEvent = ((tempEdge.Line.Direction.x * tempEdge.Line.Direction.y) < 0) ?
+                        tempEdge.FindNextIntersection(va, ref vb) :
+                        tempEdge.FindPrevIntersection(va, ref vb);
+            if (tempEvent == null)
+            {
+                return null;
+            }
+            if (tempEvent.IntersectingEdge != null)
+            {
+                i = tempEvent.IntersectingEdge.FindIntersectionIndex(vb);
+                if (i >= 0)
+                {
+                    tempEvent = tempEvent.IntersectingEdge.Intersections[i];
+                }
+            }
+        }
+        VertexEvent tempEvent2 = CreateNewTriangle(va, eventA, tempEvent);
+        if (tempEvent2 == null)
+        {
+            return null;
+        }
+        va = vb;
+        eventA = tempEvent2;
+        nextA = tempEvent;
+        return eventA;
+    }
+
+    public VertexEvent FollowCCW(ref VertexEvent eventA, ref VertexEvent nextA, ref Vector3 va)
+    {
+        Edge edgeC = nextA.IntersectingEdge;
+        Edge edgeA = eventA.TriEdge;
+        Vector3 vb = new Vector3();
+        VertexEvent tempEvent;
+
+        if (edgeC == null)
+        {
+            edgeC = edgeA.Tri.Edges[(edgeA.EdgeIndex + 2) % 3];
+        }
+        tempEvent = ((edgeC.Line.Direction.x * edgeC.Line.Direction.y) > 0) ?
+                 edgeC.FindNextIntersection(va, ref vb) :
+                 edgeC.FindPrevIntersection(va, ref vb);
+        if (tempEvent == null)
+        {
+            int i = edgeA.Tri.FindVertexIndex(va);
+            if (i < 0)
+            {
+                return null;
+            }
+            Edge temp = edgeA.Tri.Edges[(i + 2) % 3];
+            i = temp.FindIntersectionIndex(va);
+            if (i < 0)
+            {
+                return null;
+            }
+            tempEvent = ((temp.Line.Direction.x * temp.Line.Direction.y) > 0) ?
+                        temp.FindNextIntersection(va, ref vb) :
+                        temp.FindPrevIntersection(va, ref vb);
+            if (tempEvent == null)
+            {
+                return null;
+            }
+            if (tempEvent.IntersectingEdge != null)
+            {
+                i = tempEvent.IntersectingEdge.FindIntersectionIndex(vb);
+                if (i >= 0)
+                {
+                    tempEvent = tempEvent.IntersectingEdge.Intersections[i];
+                }
+            }
+        }
+        VertexEvent tempEvent2 = CreateNewTriangle(va, eventA, tempEvent);
+        if (tempEvent2 == null)
+        {
+            return null;
+        }
+        va = vb;
+        eventA = tempEvent2;
+        nextA = tempEvent;
+        return eventA;
     }
 
     public VertexEvent CreateNewTriangle(Vector3 vc, VertexEvent nextA, VertexEvent nextB)
@@ -488,36 +568,6 @@ public class VertexGroup
                 source = edgeB.Tri;
             }
         }
-        HideTriangle(t);
-        /*
-        if ((nextA.IntersectingEdge != null) &&
-            (nextA.IntersectingEdge.Tri != edgeA.Tri) &&
-            (nextA.IntersectingEdge.Tri != edgeB.Tri))
-        {
-            display |= nextA.IntersectingEdge.Tri.Contains(t);
-        }
-        if (!display &&
-            (nextB.IntersectingEdge != null) &&
-            (nextB.IntersectingEdge.Tri != edgeB.Tri) &&
-            (nextB.IntersectingEdge.Tri != edgeA.Tri))
-        {
-            display |= nextB.IntersectingEdge.Tri.Contains(t);
-        }
-        if (!display &&
-            (eventA.IntersectingEdge != null) &&
-            (eventA.IntersectingEdge.Tri != edgeA.Tri) &&
-            (eventA.IntersectingEdge.Tri != edgeB.Tri))
-        {
-            display |= eventA.IntersectingEdge.Tri.Contains(t);
-        }
-        if (!display &&
-            (eventB.IntersectingEdge != null) &&
-            (eventB.IntersectingEdge.Tri != edgeB.Tri) &&
-            (eventB.IntersectingEdge.Tri != edgeA.Tri))
-        {
-            display |= eventB.IntersectingEdge.Tri.Contains(t);
-        }
-        */
         if (mLineMesh != null)
         {
             mLineMesh.Add(new LineSegment(vc, va));
@@ -527,7 +577,9 @@ public class VertexGroup
         {
             return null;
         }
-        eventC = MakeNewEdge(t, nextA, nextB);
+        HideTriangle(t);
+        EmitTriangle(t);
+        eventC = MakeNewEdge(source, nextA, nextB);
         edgeC = eventC.TriEdge;
         if ((nextB.IntersectingEdge == null) ||
             !edgeC.SameDirection(nextB.IntersectingEdge))
@@ -541,7 +593,7 @@ public class VertexGroup
         return eventC;
     }
 
-    public VertexEvent MakeNewEdge(Triangle t, VertexEvent nextA, VertexEvent nextB)
+    public VertexEvent MakeNewEdge(Triangle srcTri, VertexEvent nextA, VertexEvent nextB)
     {
         Edge edgeA = nextA.TriEdge;
         Edge edgeB = nextB.TriEdge;
@@ -550,21 +602,19 @@ public class VertexGroup
         VertexEvent eventC;
         Edge edgeC;
 
-        HideTriangle(t);
-        EmitTriangle(t);
         edgeA.RemoveIntersectionWith(edgeB);
         edgeB.RemoveIntersectionWith(edgeA);
         nextB.TriEdge.RemoveIntersectionWith(edgeB);
         if (va.x < vb.x)
         {
-            edgeC = new Edge(edgeA.Tri, va, vb);
+            edgeC = new Edge(srcTri, va, vb);
             eventC = new VertexEvent(va, edgeC, edgeA);
             edgeC.AddIntersection(new VertexEvent(vb, edgeC, edgeB));
             edgeC.AddIntersection(eventC);
         }
         else
         {
-            edgeC = new Edge(edgeB.Tri, vb, va);
+            edgeC = new Edge(srcTri, vb, va);
             eventC = new VertexEvent(vb, edgeC, edgeA);
             edgeC.AddIntersection(new VertexEvent(va, edgeC, edgeB));
             edgeC.AddIntersection(eventC);

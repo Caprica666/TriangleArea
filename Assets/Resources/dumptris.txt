@@ -1,0 +1,13 @@
+t1 = new Triangle(new Vector3(-1.70f, -0.91f, 0),
+       new Vector3(-0.94f, -2.01f, 0),
+       new Vector3(-0.61f, 0.00f, 0));
+mSaved.Add(t1);
+t2 = new Triangle(new Vector3(-1.49f, 2.20f, 0),
+       new Vector3(-0.20f, 1.46f, 0),
+       new Vector3(2.32f, 2.81f, 0));
+mSaved.Add(t2);
+t3 = new Triangle(new Vector3(-2.58f, -1.28f, 0),
+       new Vector3(0.23f, 2.73f, 0),
+       new Vector3(1.11f, 0.52f, 0));
+mSaved.Add(t3);
+
