@@ -501,13 +501,18 @@ public class VertexGroup
         Vector3 vb = new Vector3();
         VertexEvent tempEvent;
 
-        if (edgeC == null)
+        if ((edgeC == null) &&
+            (edgeA.EdgeIndex >= 0))
         {
             edgeC = edgeA.Tri.Edges[(edgeA.EdgeIndex + 2) % 3];
         }
-        tempEvent = ((edgeC.Line.Direction.x * edgeC.Line.Direction.y) > 0) ?
-                 edgeC.FindNextIntersection(va, ref vb) :
-                 edgeC.FindPrevIntersection(va, ref vb);
+        else
+        {
+            return null;
+        }
+        tempEvent = (edgeC.Line.Slope > edgeC.Line.Slope) ?
+                     edgeC.FindNextIntersection(va, ref vb) :
+                     edgeC.FindPrevIntersection(va, ref vb);
         if (tempEvent == null)
         {
             int i = edgeA.Tri.FindVertexIndex(va);
@@ -667,7 +672,6 @@ public class VertexGroup
         return collected;
     }
 
-   
     public IEnumerator AccumulateTriangles()
     {
         Vector3 curpoint = new Vector3();

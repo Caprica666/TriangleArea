@@ -83,6 +83,22 @@ public class LineSegment
         }
     }
 
+    public float Slope
+    {
+        get
+        {
+            float dx = mEnd.x - mStart.x;
+            if (Math.Abs(dx) > EPSILON)
+            {
+                return (mEnd.y - mStart.y) / dx;
+            }
+            else
+            {
+                return float.MaxValue;
+            }
+        }
+    }
+
     public bool SameDirection(LineSegment line2)
     {
         float slope1 = Direction.y / Direction.x;
