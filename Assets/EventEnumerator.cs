@@ -17,9 +17,10 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         version = tree.Version;
     }
 
-    public VertexEvent MoveAfter(VertexEvent ev)
+    public VertexEvent FindAt(Vector3 point)
     {
         IComparer<VertexEvent> comparer = tree.Comparer;
+        VecCompare vcompare = new VecCompare();
         int order;
 
         if (Root == null)
@@ -33,7 +34,7 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         while (stack.Count > 0)
         {
             current = stack.Peek();
-            order = comparer.Compare(Current, ev);
+            order = vcompare.Compare(Current.Point, point);
 
             // P > current node, move right or stop
             if (order < 0)
@@ -46,7 +47,7 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
                 }
                 else
                 {
-                    break;
+                    return null;
                 }
             }
             // P < current node, move left or move next
@@ -59,7 +60,7 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
                 }
                 else
                 {
-                    break;
+                    return null;
                 }
             }
             else // P == current point
@@ -67,61 +68,8 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
                 MoveNext();
                 break;
             }
-        }
-        return MoveNext() ? Current : null;
-    }
-
-    public VertexEvent MoveBefore(VertexEvent ev)
-    {
-        IComparer<VertexEvent> comparer = tree.Comparer;
-        int order;
-
-        if (Root == null)
-        {
-            return null;
-        }
-        Reset();
-        stack.Clear();
-        stack.Push(Root);
-        current = Root;
-        while (stack.Count > 0)
-        {
-            current = stack.Peek();
-            order = comparer.Compare(Current, ev);
-            // P >= current node, move right or stop
-            if (order < 0)
-            {
-                if (current.Right != null)
-                {
-                    stack.Push(current.Right);
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            // P < current node, move left or move prev
-            else if (order > 0)
-            {
-                stack.Pop();
-                if (current.Left != null)
-                {
-                    stack.Push(current.Left);
-                    continue;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else // P == current point
-            {
-                MovePrev();
-                break;
-            }
-        }
-        return MovePrev() ? Current : null;
+        }     
+        return Current;
     }
 
     public virtual bool MovePrev()
@@ -146,20 +94,41 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         return true;
     }
 
-    public int CollectAfter(VertexEvent ev, List<VertexEvent> collected)
+    public int CollectAt(VertexEvent ev, List<VertexEvent> collected)
     {
-        VertexEvent temp = MoveAfter(ev);
+        Vector3 point = ev.Point;
+        VertexEvent temp = FindAt(point);
+        Stack<RBTree<VertexEvent>.Node> saveStack = new Stack<RBTree<VertexEvent>.Node>(stack.Reverse());
+
+        if (temp == null)
+        {
+            return 0;
+        }
+        CollectBefore(ev, collected);
+        if (temp != ev)
+        {
+            collected.Add(temp);
+        }
+        stack = saveStack;
+        CollectAfter(ev, collected);
+        return collected.Count;
+    }
+
+    private int CollectAfter(VertexEvent ev, List<VertexEvent> collected)
+    {
         int n = 0;
         VecCompare vcompare = new VecCompare();
         Vector3 point = ev.Point;
 
-        while ((temp != null) &&
-               (vcompare.Compare(temp.Point, ev.Point) == 0))
+        while (MoveNext())
         {
-            collected.Add(temp);
-            if (MoveNext())
+            if (ev == Current)
             {
-                temp = Current;
+                continue;
+            }
+            if (vcompare.Compare(Current.Point, point) == 0)
+            {
+                collected.Add(Current);
                 ++n;
             }
             else
@@ -170,20 +139,21 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         return n;
     }
 
-    public int CollectBefore(VertexEvent ev, List<VertexEvent> collected)
+    private int CollectBefore(VertexEvent ev, List<VertexEvent> collected)
     {
-        VertexEvent temp = MoveBefore(ev);
         int n = 0;
         VecCompare vcompare = new VecCompare();
         Vector3 point = ev.Point;
 
-        while ((temp != null) &&
-               (vcompare.Compare(temp.Point, ev.Point) == 0))
+        while (MovePrev())
         {
-            collected.Add(temp);
-            if (MovePrev())
+            if (ev == Current)
             {
-                temp = Current;
+                continue;
+            }
+            if (vcompare.Compare(Current.Point, point) == 0)
+            {
+                collected.Add(Current);
                 ++n;
             }
             else
