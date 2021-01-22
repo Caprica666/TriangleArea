@@ -6,6 +6,9 @@ using UnityEngine;
 public class LineSegment
 {
     public const float EPSILON = 2e-5f;
+    protected Vector3 mStart;
+    protected Vector3 mEnd;
+    public int VertexIndex = -1;
 
     public LineSegment(Vector3 start, Vector3 end)
     {
@@ -50,10 +53,6 @@ public class LineSegment
     {
         get { return mEnd; }
     }
-
-    protected Vector3 mStart;
-    protected Vector3 mEnd;
-    public int VertexIndex = -1;
 
     public void Set(Vector3 start, Vector3 end)
     {

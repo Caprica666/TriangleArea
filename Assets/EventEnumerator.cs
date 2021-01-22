@@ -65,7 +65,6 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
             }
             else // P == current point
             {
-                MoveNext();
                 break;
             }
         }     
@@ -99,24 +98,34 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         Vector3 point = ev.Point;
         VertexEvent temp = FindAt(point);
         Stack<RBTree<VertexEvent>.Node> saveStack = new Stack<RBTree<VertexEvent>.Node>(stack.Reverse());
+        int i, n = -1;
 
         if (temp == null)
         {
-            return 0;
+            return n;
         }
-        CollectBefore(ev, collected);
-        if (temp != ev)
+        i = CollectBefore(ev, collected);
+        if (i >= 0)
         {
-            collected.Add(temp);
+            n = i;
         }
         stack = saveStack;
-        CollectAfter(ev, collected);
-        return collected.Count;
+        MoveNext();
+        i = CollectAfter(ev, collected);
+        if (i >= 0)
+        {
+            n = i;
+        }
+        if (collected.Count == 0)
+        {
+            return -1;
+        }
+        return n;
     }
 
     private int CollectAfter(VertexEvent ev, List<VertexEvent> collected)
     {
-        int n = 0;
+        int n = -1;
         VecCompare vcompare = new VecCompare();
         Vector3 point = ev.Point;
 
@@ -124,12 +133,11 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         {
             if (ev == Current)
             {
-                continue;
+                n = collected.Count;
             }
             if (vcompare.Compare(Current.Point, point) == 0)
             {
                 collected.Add(Current);
-                ++n;
             }
             else
             {
@@ -141,7 +149,7 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
 
     private int CollectBefore(VertexEvent ev, List<VertexEvent> collected)
     {
-        int n = 0;
+        int i = -1;
         VecCompare vcompare = new VecCompare();
         Vector3 point = ev.Point;
 
@@ -149,19 +157,22 @@ public class EventEnumerator : RBTree<VertexEvent>.Enumerator
         {
             if (ev == Current)
             {
-                continue;
+                i = collected.Count;
             }
             if (vcompare.Compare(Current.Point, point) == 0)
             {
-                collected.Add(Current);
-                ++n;
+                collected.Insert(0, Current);
             }
             else
             {
                 break;
             }
         }
-        return n;
+        if (i >= 0)
+        {
+            return collected.Count - i - 1;
+        }
+        return -1;
     }
 
     public override string ToString()

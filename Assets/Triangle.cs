@@ -11,14 +11,12 @@ public class Triangle
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
     public Edge[] Edges = new Edge[3];
-    public Bounds BoundBox = new Bounds();
 
     private static readonly float EPSILON = 2e-6f;
     public Triangle(Vector3 v1, Vector3 v2, Vector3 v3, int vindex = -1)
     {
         Init(v1, v2, v3, vindex);
     }
-
     public Triangle(Triangle source)
     {
         Vector3 v1 = source.GetVertex(0);
@@ -34,7 +32,6 @@ public class Triangle
     {
         return NextID++;
     }
-
     private void Init(Vector3 v1, Vector3 v2, Vector3 v3, int vindex)
     {
         VertexIndex = vindex;
@@ -84,9 +81,6 @@ public class Triangle
         Edges[0] = new Edge(this, 0);
         Edges[1] = new Edge(this, 1);
         Edges[2] = new Edge(this, 2);
-        BoundBox.Encapsulate(v1);
-        BoundBox.Encapsulate(v2);
-        BoundBox.Encapsulate(v3);
     }
 
     public float GetArea()

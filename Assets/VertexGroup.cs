@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 
@@ -28,6 +29,7 @@ public class VertexGroup
         mIntersections = pmesh;
         mEventQ = new RBTree<VertexEvent>(mCompareEvents);
         mIsectQ = new RBTree<VertexEvent>(mCompareEvents);
+        mCompareEdges = new EdgeCompare();
         mActiveLines = new RBTree<Edge>(mCompareEdges);
     }
 
@@ -43,8 +45,8 @@ public class VertexGroup
 
     public void Clear()
     {
-        mEventQ = new RBTree<VertexEvent>(mCompareEvents);
-        mActiveLines = new RBTree<Edge>(mCompareEdges);
+        mEventQ.Clear();
+        mActiveLines.Clear();
         if (mTriMesh != null)
         {
             mTriMesh.Clear();
@@ -151,32 +153,20 @@ public class VertexGroup
         }
     }
 
-    public void AddTriangles(List<Triangle> triangles, bool clearindices = false)
+    public void AddTriangles(List<Triangle> triangles)
     {
         try
         {
             foreach (Triangle t in triangles)
             {
-                if (clearindices)
-                {
-                    t.VertexIndex = -1;
-                    t.ID = t.GetNextID();
-                    t.Edges[0].Line.VertexIndex = -1;
-                    t.Edges[1].Line.VertexIndex = -1;
-                    t.Edges[2].Line.VertexIndex = -1;
-                    t.Edges[0].Intersections.Clear();
-                    t.Edges[1].Intersections.Clear();
-                    t.Edges[2].Intersections.Clear();
-                }
-                if (t.Vertices[2].x <= mCompareEdges.CurrentX)
-                {
-                    if (mClipMesh != null)
-                    {
-                        t.VertexIndex = -1;
-                        mClipMesh.AddTriangle(t);
-                    }
-                    continue;
-                }
+                t.VertexIndex = -1;
+                t.ID = t.GetNextID();
+                t.Edges[0].Line.VertexIndex = -1;
+                t.Edges[1].Line.VertexIndex = -1;
+                t.Edges[2].Line.VertexIndex = -1;
+                t.Edges[0].Intersections.Clear();
+                t.Edges[1].Intersections.Clear();
+                t.Edges[2].Intersections.Clear();
                 if (mTriMesh != null)
                 {
                     mTriMesh.AddTriangle(t);
@@ -189,20 +179,13 @@ public class VertexGroup
                 {
                     Vector3 v1 = t.Vertices[i];
                     Vector3 v2 = t.Vertices[(i + 1) % 3];
-                    if (v1.x > mCompareEdges.CurrentX)
-                    {
-                        VertexEvent p1 = new VertexEvent(v1, t, i);
+                    VertexEvent p1 = new VertexEvent(v1, t, i);
+                    VertexEvent p2 = new VertexEvent(v2, t, i);
 
-                        p1.TriEdge.AddIntersection(p1);
-                        AddEvent(p1);
-                    }
-                    if (v2.x > mCompareEdges.CurrentX)
-                    {
-                        VertexEvent p2 = new VertexEvent(v2, t, i);
-
-                        p2.TriEdge.AddIntersection(p2);
-                        AddEvent(p2);
-                    }
+                    p1.TriEdge.AddIntersection(p1);
+                    AddEvent(p1);
+                    p2.TriEdge.AddIntersection(p2);
+                    AddEvent(p2);
                 }
             }
         }
@@ -412,12 +395,12 @@ public class VertexGroup
         {
             if (nextA.Line.SameDirection(nextB.Line))
             {
-                break;
+                return eventB;
             }
             eventC = CreateNewTriangle(vc, nextA, nextB);
             if (eventC != null)
             {
-                break;
+                return eventB;
             }
             if (TurnCorner(ref eventA, ref nextA, ref va, false) == null)
             {
@@ -435,7 +418,7 @@ public class VertexGroup
             {
                 break;
             }
-            eventC = CreateNewTriangle(vc, nextA, nextB);
+            eventC = CreateNewTriangle(vc, nextB, nextA);
             if (eventC != null)
             {
                 break;
@@ -444,26 +427,66 @@ public class VertexGroup
         return eventB;
     }
 
+    public bool IsClockwise(Vector3 v1, Vector3 v2, Vector3 dir)
+    {
+        Vector3 u1 = v2 - v1;
+        float t = (u1.x * dir.y) - (u1.y * dir.x);
+        return t < 0;
+    }
+
     public VertexEvent TurnCorner(ref VertexEvent eventA, ref VertexEvent nextA, ref Vector3 va, bool cw = true)
     {
         Edge edgeA = eventA.TriEdge;
         Vector3 vb = new Vector3();
         List<VertexEvent> atPointA = new List<VertexEvent>();
         EventEnumerator iter = new EventEnumerator(mIsectQ);
+        int mid;
+        IEnumerable<int> temp1 = null;
+        IEnumerable<int> temp2 = null;
 
-        if (iter.CollectAt(nextA, atPointA) <= 0)
+        if ((mid = iter.CollectAt(nextA, atPointA)) < 0)
         {
             return null;
         }
-        foreach (VertexEvent ev in atPointA)
+        if (mid + 1 < atPointA.Count)
         {
+            int n = atPointA.Count - (mid + 1);
+            temp1 = Enumerable.Range(mid + 1, n);
+        }
+        if (mid - 1 >= 0)
+        {
+            temp2 = Enumerable.Range(0, mid);
+        }
+        if (temp1 != null)
+        {
+            if (temp2 != null)
+            {
+                temp1 = temp1.Concat<int>(temp2);
+            }
+        }
+        else
+        {
+            temp1 = temp2;
+        }
+        if (cw)
+        {
+            temp1 = temp1.Reverse();
+        }
+        temp1 = temp1.ToArray();
+        foreach (int i in temp1)
+        {
+            VertexEvent ev = atPointA[i];
+            if (ev == eventA)
+            {
+                continue;
+            }
             Edge edgeC = ev.TriEdge;
-            float dir = edgeC.Line.Direction.x * edgeC.Line.Direction.y;
-            bool next = cw ? (dir < 0) : (dir >= 0);              
+            bool next = (cw == IsClockwise(eventA.Point, va, edgeC.Line.Direction));
             VertexEvent tempEvent1 = next ?
                          edgeC.FindNextIntersection(va, ref vb) :
                          edgeC.FindPrevIntersection(va, ref vb);
-            if (tempEvent1 != null)
+            if ((tempEvent1 != null) &&
+                (tempEvent1 != eventA))
             {
                 VertexEvent tempEvent2 = CreateNewTriangle(va, eventA, tempEvent1);
                 if (tempEvent2 != null)
@@ -515,7 +538,8 @@ public class VertexGroup
         if ((nextB.IntersectingEdge == null) ||
             !edgeC.SameDirection(nextB.IntersectingEdge))
         {
-            mIsectQ.Add(eventC);
+            mIsectQ.Add(edgeC.Intersections[0]);
+            mIsectQ.Add(edgeC.Intersections[1]);
             if (mLineMesh != null)
             {
                 mLineMesh.Add(edgeC.Line);

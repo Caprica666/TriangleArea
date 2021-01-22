@@ -297,7 +297,7 @@ public class TriangleArea : MonoBehaviour
         Triangle.NextID = 1;
         mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh, mIntersections);
         mVertexGroup.DebugLevel = DebugLevel;
-        mVertexGroup.AddTriangles(mSaved, true);
+        mVertexGroup.AddTriangles(mSaved);
         mTriMesh.Display();
         mClipMesh.Display();
         yield return new WaitForEndOfFrame();
