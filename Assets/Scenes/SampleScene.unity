@@ -333,8 +333,8 @@ MonoBehaviour:
   DebugLevel: 0
   New: 0
   PlaneSweep: 0
-  Test: 3
-  TriangleCount: 2
+  Test: 4
+  TriangleCount: 4
 --- !u!33 &904569348
 MeshFilter:
   m_ObjectHideFlags: 0

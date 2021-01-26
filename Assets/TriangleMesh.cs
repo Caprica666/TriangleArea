@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public class TriangleMesh : MonoBehaviour
 {
@@ -100,18 +98,10 @@ public class TriangleMesh : MonoBehaviour
     public void GenerateMesh(List<Triangle> trilist)
     {
         Clear();
+        VertexCount = trilist.Count * 3;
         foreach (Triangle t in trilist)
         {
-            t.VertexIndex = mVertices.Count;
-            mVertices.Add(t.GetVertex(0));
-            mVertices.Add(t.GetVertex(1));
-            mVertices.Add(t.GetVertex(2));
-            mIndices.Add(mIndices.Count);
-            mIndices.Add(mIndices.Count);
-            mIndices.Add(mIndices.Count);
-            mColors.Add(t.TriColor);
-            mColors.Add(t.TriColor);
-            mColors.Add(t.TriColor);
+            AddTriangle(t);
         }
         Display();
     }

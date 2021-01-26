@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public class Edge
 {
@@ -196,9 +194,11 @@ public class EdgeCompare : Comparer<Edge>
         Vector3 v2 = s2.End - s2.Start;
         float y1 = s1.CalcY(CurrentX);
         float y2 = s2.CalcY(CurrentX);
-        float dx = s1.Start.x - CurrentX;
+        Vector3 sweep = new Vector3(0, -1, 0);
+        float dx;
 
-
+        v1.Normalize();
+        v2.Normalize();
         //
         // Check for vertical lines
         //
@@ -206,65 +206,39 @@ public class EdgeCompare : Comparer<Edge>
         {
             if (y2 == float.MaxValue)
             {
-                // both vertical, sort on X
                 dx = s1.Start.x - s2.Start.x;
+                // both vertical, sort on X
                 if (Math.Abs(dx) > LineSegment.EPSILON)
                 {
                     return (dx > 0) ? 1 : -1;
                 }
-                return e1.Tri.GetHashCode() - e2.Tri.GetHashCode();
+                return e1.Tri.ID - e2.Tri.ID;
             }
             //
             // first edge is vertical, not the second
             // if no overlap, sort on starting x
             //
-            if (s1.Start.x < s2.Start.x)
-            {
-                return -1;
-            }
-            if (s1.Start.x > s2.End.x)
-            {
-                return 1;
-            }
+            dx = s1.Start.x - CurrentX;
             if (Math.Abs(dx) < LineSegment.EPSILON)
             {
                 y1 = y2;
+                v1 = sweep;
             }
-            else if (dx < 0)
-            {
-                y1 = s1.Start.y;
-            }
-            else
-            {
-                y1 = s1.End.y;
-            }
+            else return (dx < 0) ? 1 : -1;
         }
         //
         // second edge is vertical, not the first
         // if no overlap, sort on starting x
         //
-        if (y2 == float.MaxValue)
+        else if (y2 == float.MaxValue)
         {
-            if (s2.Start.x < s1.Start.x)
-            {
-                return 1;
-            }
-            if (s2.Start.x > s1.End.x)
-            {
-                return -1;
-            }
+            dx = s2.Start.x - CurrentX;
             if (Math.Abs(dx) < LineSegment.EPSILON)
             {
                 y2 = y1;
+                v2 = sweep;
             }
-            else if (dx < 0)
-            {
-                y2 = s2.Start.y;
-            }
-            else
-            {
-                y2 = s2.End.y;
-            }
+            else return (dx < 0) ? 1 : -1;
         }
         //
         // Compare Y values at the current X
@@ -275,12 +249,9 @@ public class EdgeCompare : Comparer<Edge>
         {
             return (dy > 0) ? 1 : -1;
         }
-        v1.Normalize();
-        v2.Normalize();
         //
         // sort based on angle around common point
         //
-        Vector3 sweep = new Vector3(0, -1, 0);
         float a1 = Vector3.Dot(sweep, v1);
         float a2 = Vector3.Dot(sweep, v2);
         float t = a2 - a1;
@@ -288,7 +259,7 @@ public class EdgeCompare : Comparer<Edge>
         {
             return (t > 0) ? 1 : -1;
         }
-        return e1.Tri.GetHashCode() - e2.Tri.GetHashCode();
+        return e1.Tri.ID - e2.Tri.ID;
     }
 }
 

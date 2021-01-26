@@ -1144,6 +1144,7 @@
     <Compile Include="Assets\BitHelper.cs" />
     <Compile Include="Assets\Edge.cs" />
     <Compile Include="Assets\EventEnumerator.cs" />
+    <Compile Include="Assets\FileLogger.cs" />
     <Compile Include="Assets\LineEnumerator.cs" />
     <Compile Include="Assets\LineMesh.cs" />
     <Compile Include="Assets\LineSegment.cs" />

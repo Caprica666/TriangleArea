@@ -16,7 +16,6 @@ public class VertexGroup
     private PointMesh mIntersections = null;
     private EventCompare mCompareEvents = new EventCompare();
     private EdgeCompare mCompareEdges = new EdgeCompare();
-    public int DebugLevel = 0;
 
     public VertexGroup(TriangleMesh tmesh,
                        LineMesh lmesh = null,
@@ -70,6 +69,7 @@ public class VertexGroup
         LineEnumerator iter = new LineEnumerator(this);
 
         Edge.EdgeID = 0;
+        Debug.unityLogger.Log("ACCUMULATE INTERSECTIONS");
         while (AccumulateIntersections(iter))
         {
             Display();
@@ -122,13 +122,10 @@ public class VertexGroup
         bool removed = mActiveLines.Remove(e);
         if (!removed)
         {
-            Debug.LogWarning("ERROR: Cannot Remove Edge " + e + " X = " + mCompareEdges.CurrentX);
+            Debug.unityLogger.LogWarning("Cannot Remove Edge " + e + " X = " + mCompareEdges.CurrentX, this);
             return;
         }
-        if (DebugLevel > 0)
-        {
-            Debug.Log("Removed Edge " + e + " X = " + mCompareEdges.CurrentX);
-        }
+        Debug.unityLogger.Log("Removed Edge " + e + " X = " + mCompareEdges.CurrentX);
         if (updateMesh && (mLineMesh != null))
         {
             mLineMesh.Update(vindex, Color.white);
@@ -140,13 +137,10 @@ public class VertexGroup
         bool added = mActiveLines.Add(e);
         if (!added)
         {
-            Debug.LogError("ERROR: Cannot Add Edge " + e + " X = " + mCompareEdges.CurrentX);
+            Debug.unityLogger.LogWarning("Cannot Add Edge " + e + " X = " + mCompareEdges.CurrentX, this);
             return;
         }
-        if (DebugLevel > 0)
-        {
-            Debug.Log("Added Edge " + e + " X = " + mCompareEdges.CurrentX);
-        }
+        Debug.unityLogger.Log("Added Edge " + e + " X = " + mCompareEdges.CurrentX);
         if (mLineMesh != null)
         {
             mLineMesh.Add(e.Line);
@@ -171,10 +165,7 @@ public class VertexGroup
                 {
                     mTriMesh.AddTriangle(t);
                 }
-                if (DebugLevel > 0)
-                {
-                    Debug.Log("Added Triangle " + t + " X = " + mCompareEdges.CurrentX);
-                }
+                Debug.unityLogger.Log("Adding Triangle " + t + " X = " + mCompareEdges.CurrentX);
                 for (int i = 0; i < 3; ++i)
                 {
                     Vector3 v1 = t.Vertices[i];
@@ -201,17 +192,14 @@ public class VertexGroup
         {
             return false;
         }
-        if (DebugLevel > 0)
-        {
-            Debug.Log("Removed Triangle " + tri + " X = " + mCompareEdges.CurrentX);
-        }
+        Debug.unityLogger.Log("Removing Triangle " + tri + " X = " + mCompareEdges.CurrentX);
         for (int i = 0; i < 3; ++i)
         {
             VertexEvent e1 = new VertexEvent(tri.Vertices[i], tri, i);
             VertexEvent e2 = new VertexEvent(tri.Vertices[(i + 1) % 3], tri, i);
 
-            mIsectQ.Remove(e1);
-            mIsectQ.Remove(e2);
+            RemoveIntersection(e1);
+            RemoveIntersection(e2);
             RemoveEvent(e1);
             RemoveEvent(e2);
         }
@@ -234,28 +222,48 @@ public class VertexGroup
         bool removed = mEventQ.Remove(e);
         if (!removed)
         {
-            Debug.LogWarning("ERROR: Could not remove event " + e);
+            Debug.unityLogger.LogWarning("Could not remove event " + e, this);
             return;
         }
-        if (DebugLevel > 1)
-        {
-            Debug.Log("   Removed event " + e);
-        }
+        Debug.unityLogger.Log("   Removed event " + e);
     }
 
     public void AddEvent(VertexEvent e)
     {
         bool added = mEventQ.Add(e);
-        if (DebugLevel > 1)
+        if (added)
         {
-            if (added)
-            {
-                Debug.Log("   Added event " + e);
-            }
-            else
-            {
-                Debug.LogWarning("ERROR: Could not add event " + e);
-            }
+            Debug.unityLogger.Log("   Added event " + e);
+        }
+        else
+        {
+            Debug.unityLogger.LogWarning("Could not add event " + e, this);
+        }
+    }
+
+    public void AddIntersection(VertexEvent e)
+    {
+        bool added = mIsectQ.Add(e);
+        if (added)
+        {
+            Debug.unityLogger.Log("   Added intersection event " + e);
+        }
+        else
+        {
+            Debug.unityLogger.LogWarning("Could not add intersection event " + e, this);
+        }
+    }
+
+    public void RemoveIntersection(VertexEvent e)
+    {
+        bool removed = mIsectQ.Remove(e);
+        if (removed)
+        {
+            Debug.unityLogger.Log("   Removed intersection event " + e);
+        }
+        else
+        {
+            Debug.unityLogger.LogWarning("ERROR: Could not remove intersection event " + e, this);
         }
     }
 
@@ -270,22 +278,21 @@ public class VertexGroup
             return false;
         }
         int i = edgeB.FindIntersectionIndex(edgeB.Line.Start);
+        int j = (edgeB.EdgeIndex + 2) % 3;
+        Edge adjacent = edgeB.Tri.Edges[j];
+        
+        j = adjacent.FindIntersectionIndex(edgeB.Line.Start);
         if (i >= 0)
         {
             ve = edgeB.Intersections[i];
             edgeB.Intersections.RemoveAt(i);
-            mIsectQ.Remove(ve);
+            RemoveIntersection(ve);
         }
-        i = (edgeB.EdgeIndex + 2) % 3;
-
-        Edge adjacent = edgeB.Tri.Edges[i];
-
-        i = adjacent.FindIntersectionIndex(edgeB.Line.Start);
-        if (i >= 0)
+        if (j >= 0)
         {
-            ve = adjacent.Intersections[i];
-            adjacent.Intersections.RemoveAt(i);
-            mIsectQ.Remove(ve);
+            ve = adjacent.Intersections[j];
+            adjacent.Intersections.RemoveAt(j);
+            RemoveIntersection(ve);
         }
         return true;
     }
@@ -301,21 +308,21 @@ public class VertexGroup
             return false;
         }
         int i = edgeB.FindIntersectionIndex(edgeB.Line.End);
+        int j = (edgeB.EdgeIndex + 1) % 3;
+        Edge adjacent = edgeB.Tri.Edges[j];
+        
+        j = adjacent.FindIntersectionIndex(edgeB.Line.End);
         if (i >= 0)
         {
             ve = edgeB.Intersections[i];
-            mIsectQ.Remove(ve);
+            RemoveIntersection(ve);
             edgeB.Intersections.RemoveAt(i);
         }
-        i = (edgeB.EdgeIndex + 2) % 3;
-        Edge adjacent = edgeB.Tri.Edges[i];
-
-        i = adjacent.FindIntersectionIndex(edgeB.Line.End);
-        if (i >= 0)
+        if (j >= 0)
         {
-            ve = adjacent.Intersections[i];
-            adjacent.Intersections.RemoveAt(i);
-            mIsectQ.Remove(ve);
+            ve = adjacent.Intersections[j];
+            adjacent.Intersections.RemoveAt(j);
+            RemoveIntersection(ve);
         }
         return true;
     }
@@ -344,6 +351,7 @@ public class VertexGroup
             VertexEvent ve1 = new VertexEvent(isect, edgeA, edgeB);
             VertexEvent ve2 = new VertexEvent(isect, edgeB, edgeA);
 
+            Debug.unityLogger.Log("Check Intersection " + edgeA.ToString() + " with " + edgeB.ToString());
             if (CheckStart(edgeA, edgeB) ||
                 CheckEnd(edgeA, edgeB))
             {
@@ -391,6 +399,7 @@ public class VertexGroup
         {
             return eventA;
         }
+        Debug.unityLogger.Log("Handle Intersection at " + vc.ToString());
         while (!eventA.Line.SameDirection(eventB.Line))
         {
             if (nextA.Line.SameDirection(nextB.Line))
@@ -492,7 +501,7 @@ public class VertexGroup
                 if (tempEvent2 != null)
                 {
                     va = vb;
-                    mIsectQ.Remove(eventA);
+                    RemoveIntersection(eventA);
                     eventA = tempEvent2;
                     nextA = tempEvent1;
                     return eventA;
@@ -514,6 +523,7 @@ public class VertexGroup
         Triangle t = new Triangle(va, vb, vc);
         bool display = edgeA.Tri.Contains(t);
 
+        Debug.unityLogger.Log("Check triangle at " + vc.ToString() + ", " + nextA.ToString() + ", " + nextB.ToString());
         if (edgeA.Tri != edgeB.Tri)
         {
             display |= edgeB.Tri.Contains(t);
@@ -538,8 +548,8 @@ public class VertexGroup
         if ((nextB.IntersectingEdge == null) ||
             !edgeC.SameDirection(nextB.IntersectingEdge))
         {
-            mIsectQ.Add(edgeC.Intersections[0]);
-            mIsectQ.Add(edgeC.Intersections[1]);
+            AddIntersection(edgeC.Intersections[0]);
+            AddIntersection(edgeC.Intersections[1]);
             if (mLineMesh != null)
             {
                 mLineMesh.Add(edgeC.Line);
@@ -573,6 +583,7 @@ public class VertexGroup
             edgeC.AddIntersection(new VertexEvent(va, edgeC, edgeB));
             edgeC.AddIntersection(eventC);
         }
+        Debug.unityLogger.Log("Make New Edge " + eventC.ToString());
         return eventC;
     }
 
@@ -614,10 +625,7 @@ public class VertexGroup
             }           
             collected.Add(e);
         }
-        if (DebugLevel > 0)
-        {
-            Debug.Log("Process events at " + point + " " + collected.Count + " edges");
-        }
+        Debug.unityLogger.Log("Process events at " + point + " " + collected.Count + " edges");
         return collected;
     }
 
@@ -628,6 +636,7 @@ public class VertexGroup
         IComparer<Vector3> veccompare = new VecCompare();
         List<VertexEvent> collected = new List<VertexEvent>();
 
+        Debug.unityLogger.Log("ACCUMULATE TRIANGLES");
         if (mLineMesh != null)
         {
             mLineMesh.Clear();
@@ -644,7 +653,7 @@ public class VertexGroup
                 {
                     collected.Add(ve);
                 }
-                mIsectQ.Remove(ve);
+                RemoveIntersection(ve);
             }
             if (ve != null)
             {
@@ -670,6 +679,7 @@ public class VertexGroup
 
     private void MarkIntersection(Vector3 isect)
     {
+        Debug.unityLogger.Log("Line Intersection at " + isect.ToString());
         if (mIntersections != null)
         {
             mIntersections.Add(isect);
@@ -700,7 +710,7 @@ public class VertexGroup
                 VertexEvent e1 = collected[i];
 
                 RemoveEvent(e1);
-                mIsectQ.Add(e1);
+                AddIntersection(e1);
                 if (e1.Line.Start == point)
                 {
                     addus.Add(e1.TriEdge);
@@ -708,7 +718,10 @@ public class VertexGroup
                 else if (e1.Line.End == point)
                 {
                     RemoveActive(e1.TriEdge, true);
-                    collected.RemoveAt(i--);
+                    if (Math.Abs(e1.Line.Slope) != float.MaxValue)
+                    {
+                        collected.RemoveAt(i--);
+                    }
                 }
                 else
                 {
@@ -770,6 +783,7 @@ public class VertexGroup
         }
         catch (ArgumentException ex)
         {
+            Debug.unityLogger.LogException(ex);
             return false;
         }
     }

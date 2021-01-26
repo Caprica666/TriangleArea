@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public class VertexEvent
 {
@@ -115,8 +113,8 @@ public class EventCompare : IComparer<VertexEvent>
             {
                 return 1;
             }
-            return p1.IntersectingEdge.GetHashCode() - p2.IntersectingEdge.GetHashCode();
+            return p1.IntersectingEdge.EdgeIndex - p2.IntersectingEdge.EdgeIndex;
         }
-        return p1.TriEdge.Tri.GetHashCode() - p2.TriEdge.Tri.GetHashCode();
+        return p1.TriEdge.Tri.ID - p2.TriEdge.Tri.ID;
      }
 }

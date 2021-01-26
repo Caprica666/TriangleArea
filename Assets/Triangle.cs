@@ -6,7 +6,7 @@ using UnityEngine;
 public class Triangle
 {
     static public int NextID = 0;
-    public int ID = 0;
+    public int ID;
     public int VertexIndex = -1;
     public Color TriColor;
     public Vector3[] Vertices = new Vector3[3];
