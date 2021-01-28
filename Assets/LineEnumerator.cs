@@ -5,8 +5,8 @@ using UnityEngine;
 
 public class LineEnumerator : RBTree<Edge>.Enumerator
 {
-    public LineEnumerator(VertexGroup lines)
-    : base(lines.ActiveLines)
+    public LineEnumerator(RBTree<Edge> lines)
+    : base(lines)
     {
     }
 

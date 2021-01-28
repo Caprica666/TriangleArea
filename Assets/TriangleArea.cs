@@ -17,7 +17,7 @@ public class TriangleArea : MonoBehaviour
     private TriangleMesh mClipMesh;
     private List<Triangle> mSaved = null;
     private Rect mBounds = new Rect(0, 0, 6, 6);
-    private VertexGroup mVertexGroup;
+    private Triangulator mTriangulator;
     private LineMesh mLinesToRender;
     private PointMesh mIntersections;
     private int mRuns = 0;
@@ -222,6 +222,7 @@ public class TriangleArea : MonoBehaviour
                 break;
             }
             mClipMesh.Clear();
+            mIntersections.Clear();
             TriangleCount = mSaved.Count;
             mTriMesh.VertexCount = TriangleCount * 3;
             mTriMesh.GenerateMesh(mSaved);
@@ -311,14 +312,14 @@ public class TriangleArea : MonoBehaviour
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         Triangle.NextID = 1;
-        mVertexGroup = new VertexGroup(mTriMesh, mLinesToRender, mClipMesh, mIntersections);
-        mVertexGroup.AddTriangles(mSaved);
+        mTriangulator = new Triangulator(mTriMesh, mLinesToRender, mClipMesh, mIntersections);
+        mTriangulator.AddTriangles(mSaved);
         mTriMesh.Display();
         mClipMesh.Display();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
         yield return new WaitForEndOfFrame();
-        StartCoroutine(mVertexGroup.ShowIntersections());
+        StartCoroutine(mTriangulator.ShowIntersections());
     }
 
 }

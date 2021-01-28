@@ -216,29 +216,33 @@ public class EdgeCompare : Comparer<Edge>
             }
             //
             // first edge is vertical, not the second
-            // if no overlap, sort on starting x
+            // choose vertical direction based on 
+            // the slope of the other line
+            // if Y increases with X, treat the vertical
+            // line as being above. Otherwise point it
+            // down and treat as below.
             //
             dx = s1.Start.x - CurrentX;
             if (Math.Abs(dx) < LineSegment.EPSILON)
             {
-                y1 = y2;
-                v1 = sweep;
+                y1 = y2;        // they intersect at CurrentX
             }
-            else return (dx < 0) ? 1 : -1;
         }
         //
         // second edge is vertical, not the first
-        // if no overlap, sort on starting x
+        // choose vertical direction based on 
+        // the slope of the other line
+        // if Y increases with X, treat the vertical
+        // line as being above. Otherwise point it
+        // down and treat as below.
         //
         else if (y2 == float.MaxValue)
         {
             dx = s2.Start.x - CurrentX;
             if (Math.Abs(dx) < LineSegment.EPSILON)
             {
-                y2 = y1;
-                v2 = sweep;
+                y2 = y1;        // they intersect at CurrentX
             }
-            else return (dx < 0) ? 1 : -1;
         }
         //
         // Compare Y values at the current X
